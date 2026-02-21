@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MWT: Multivariable Model vs Ratiometric Scaling</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 24px 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+
+        .header .subtitle {
+            font-size: 14px;
+            color: #64748b;
+            font-weight: 400;
+        }
+
+        .controls {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 3px;
+            background: #e2e8f0;
+            border-radius: 8px;
+            padding: 3px;
+        }
+
+        .btn-group button {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 400;
+            font-family: inherit;
+            background: transparent;
+            color: #475569;
+            transition: all 0.15s ease;
+        }
+
+        .btn-group button.active {
+            background: #1e40af;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .btn-group.axis button.active {
+            background: #6366f1;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            color: #475569;
+        }
+
+        .checkbox-label input { cursor: pointer; }
+
+        .chart-container {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            padding: 20px 16px 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            overflow-x: auto;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        @media (max-width: 640px) {
+            .cards { grid-template-columns: 1fr !important; }
+        }
+
+        @media (min-width: 641px) and (max-width: 900px) {
+            .cards { grid-template-columns: 1fr 1fr !important; }
+        }
+
+        .card {
+            border-radius: 10px;
+            padding: 14px;
+            border: 1px solid;
+        }
+
+        .card-blue { background: #eff6ff; border-color: #bfdbfe; }
+        .card-red { background: #fef2f2; border-color: #fecaca; }
+        .card-purple { background: #f5f3ff; border-color: #ddd6fe; }
+
+        .card h3 {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .card-blue h3 { color: #1e40af; }
+        .card-red h3 { color: #dc2626; }
+        .card-purple h3 { color: #6d28d9; }
+
+        .card p {
+            font-size: 13px;
+            line-height: 1.55;
+        }
+
+        .card-blue p { color: #1e3a5f; }
+        .card-red p { color: #7f1d1d; }
+
+        .crossover-row {
+            display: flex;
+            gap: 24px;
+            font-size: 13px;
+            flex-wrap: wrap;
+        }
+
+        .crossover-male { color: #1e40af; }
+        .crossover-female { color: #dc2626; }
+
+        .footer {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 11px;
+            color: #94a3b8;
+        }
+
+        /* Recharts tooltip override */
+        .custom-tooltip {
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .custom-tooltip .tt-header {
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #0f172a;
+        }
+
+        .custom-tooltip .tt-row {
+            padding: 1px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ReferenceDot } = Recharts;
+
+        // Canonical reference individuals (BMI 24, age 55)
+        const CANONICAL = {
+            male:   { height: 178, weight: 76.04, bsa: 1.939, shiwani_mean: 11.3, shiwani_uln: 14.1 },
+            female: { height: 164, weight: 64.55, bsa: 1.715, shiwani_mean:  9.2, shiwani_uln: 12.0 },
+        };
+        // MESA ratiometric ULN coefficients (mean+2SD in mm/m²)
+        const MESA_COEFF = {
+            ivs:  { m: 8.3, f: 8.6 },   // M: 6.1+2×1.1=8.3  F: 6.0+2×1.3=8.6
+            lvpw: { m: 6.4, f: 6.5 },    // M: 5.0+2×0.7=6.4  F: 5.1+2×0.7=6.5
+        };
+
+        // MESA IVS/BSA: Male 6.1±1.1 mm/m², Female 6.0±1.3 mm/m² → ULN (mean+2SD) = M: 8.3, F: 8.6 × BSA
+        // MESA LVPW/BSA: Male 5.0±0.7 mm/m², Female 5.1±0.7 mm/m² → ULN (mean+2SD) = M: 6.4, F: 6.5 × BSA
+        const DATA = [
+            { height: 120, bsa: 1.07, m_mwt: 9.0, m_uln: 11.9, f_mwt: 7.7, f_uln: 10.5, m_ivs: 8.88, f_ivs: 9.20, m_pw: 6.85, f_pw: 6.96 },
+            { height: 125, bsa: 1.14, m_mwt: 9.0, m_uln: 11.9, f_mwt: 7.7, f_uln: 10.5, m_ivs: 9.46, f_ivs: 9.80, m_pw: 7.30, f_pw: 7.41 },
+            { height: 130, bsa: 1.21, m_mwt: 9.0, m_uln: 11.9, f_mwt: 7.7, f_uln: 10.5, m_ivs: 10.04, f_ivs: 10.41, m_pw: 7.74, f_pw: 7.87 },
+            { height: 135, bsa: 1.28, m_mwt: 9.3, m_uln: 12.1, f_mwt: 7.9, f_uln: 10.8, m_ivs: 10.62, f_ivs: 11.01, m_pw: 8.19, f_pw: 8.32 },
+            { height: 140, bsa: 1.35, m_mwt: 9.5, m_uln: 12.3, f_mwt: 8.2, f_uln: 11.0, m_ivs: 11.21, f_ivs: 11.61, m_pw: 8.64, f_pw: 8.78 },
+            { height: 145, bsa: 1.43, m_mwt: 9.8, m_uln: 12.6, f_mwt: 8.4, f_uln: 11.3, m_ivs: 11.87, f_ivs: 12.30, m_pw: 9.15, f_pw: 9.30 },
+            { height: 150, bsa: 1.50, m_mwt: 10.0, m_uln: 12.8, f_mwt: 8.7, f_uln: 11.5, m_ivs: 12.45, f_ivs: 12.90, m_pw: 9.60, f_pw: 9.75 },
+            { height: 155, bsa: 1.58, m_mwt: 10.2, m_uln: 13.0, f_mwt: 8.9, f_uln: 11.7, m_ivs: 13.11, f_ivs: 13.59, m_pw: 10.11, f_pw: 10.27 },
+            { height: 160, bsa: 1.65, m_mwt: 10.4, m_uln: 13.2, f_mwt: 9.1, f_uln: 11.9, m_ivs: 13.70, f_ivs: 14.19, m_pw: 10.56, f_pw: 10.73 },
+            { height: 165, bsa: 1.73, m_mwt: 10.6, m_uln: 13.4, f_mwt: 9.3, f_uln: 12.1, m_ivs: 14.36, f_ivs: 14.88, m_pw: 11.07, f_pw: 11.25 },
+            { height: 170, bsa: 1.81, m_mwt: 10.8, m_uln: 13.6, f_mwt: 9.5, f_uln: 12.3, m_ivs: 15.02, f_ivs: 15.57, m_pw: 11.58, f_pw: 11.77 },
+            { height: 175, bsa: 1.89, m_mwt: 11.1, m_uln: 13.9, f_mwt: 9.8, f_uln: 12.6, m_ivs: 15.69, f_ivs: 16.25, m_pw: 12.10, f_pw: 12.29 },
+            { height: 180, bsa: 1.97, m_mwt: 11.4, m_uln: 14.2, f_mwt: 10.1, f_uln: 12.9, m_ivs: 16.35, f_ivs: 16.94, m_pw: 12.61, f_pw: 12.81 },
+            { height: 185, bsa: 2.06, m_mwt: 11.7, m_uln: 14.6, f_mwt: 10.4, f_uln: 13.2, m_ivs: 17.10, f_ivs: 17.72, m_pw: 13.18, f_pw: 13.39 },
+            { height: 190, bsa: 2.14, m_mwt: 12.2, m_uln: 15.0, f_mwt: 10.8, f_uln: 13.7, m_ivs: 17.76, f_ivs: 18.40, m_pw: 13.70, f_pw: 13.91 },
+            { height: 195, bsa: 2.22, m_mwt: 12.4, m_uln: 15.3, f_mwt: 11.1, f_uln: 14.0, m_ivs: 18.43, f_ivs: 19.09, m_pw: 14.21, f_pw: 14.43 },
+            { height: 200, bsa: 2.31, m_mwt: 12.7, m_uln: 15.5, f_mwt: 11.4, f_uln: 14.2, m_ivs: 19.17, f_ivs: 19.87, m_pw: 14.78, f_pw: 15.02 },
+            { height: 205, bsa: 2.40, m_mwt: 12.9, m_uln: 15.7, f_mwt: 11.6, f_uln: 14.4, m_ivs: 19.92, f_ivs: 20.64, m_pw: 15.36, f_pw: 15.60 },
+            { height: 210, bsa: 2.49, m_mwt: 13.1, m_uln: 15.9, f_mwt: 11.8, f_uln: 14.6, m_ivs: 20.67, f_ivs: 21.41, m_pw: 15.94, f_pw: 16.19 },
+            { height: 215, bsa: 2.57, m_mwt: 13.1, m_uln: 16.0, f_mwt: 11.8, f_uln: 14.7, m_ivs: 21.33, f_ivs: 22.10, m_pw: 16.45, f_pw: 16.71 },
+            { height: 220, bsa: 2.66, m_mwt: 13.1, m_uln: 16.0, f_mwt: 11.8, f_uln: 14.7, m_ivs: 22.08, f_ivs: 22.88, m_pw: 17.02, f_pw: 17.29 },
+        ];
+
+        function CustomTooltip({ active, payload }) {
+            if (!active || !payload || payload.length === 0) return null;
+            const d = payload[0].payload;
+            return (
+                <div className="custom-tooltip">
+                    <div className="tt-header">BSA: {d.bsa} m² — Height: {d.height} cm</div>
+                    {payload.map((p, i) => (
+                        <div key={i} className="tt-row" style={{ color: p.color }}>
+                            {p.name}: <strong>{typeof p.value === 'number' ? p.value.toFixed(1) : p.value} mm</strong>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function App() {
+            const [sex, setSex] = useState('both');
+            const [showMean, setShowMean] = useState(false);
+            const [showHCM, setShowHCM] = useState(true);
+            const [xAxis, setXAxis] = useState('bsa');
+            const [mesaParam, setMesaParam] = useState('ivs');
+
+            const xLabel = xAxis === 'bsa' ? 'Body Surface Area (m²)' : 'Height (cm)';
+            const mMesaKey = mesaParam === 'ivs' ? 'm_ivs' : 'm_pw';
+            const fMesaKey = mesaParam === 'ivs' ? 'f_ivs' : 'f_pw';
+            const mesaLabel = mesaParam === 'ivs' ? 'IVS' : 'LVPW';
+            const mesaDetail = mesaParam === 'ivs'
+                ? '♂ 6.1±1.1  ♀ 6.0±1.3 mm/m² — F>M due to larger SD'
+                : '♂ 5.0±0.7  ♀ 5.1±0.7 mm/m² — F>M due to larger mean';
+
+            // Find crossover: where MESA ratio exceeds Shiwani ULN
+            const maleCross = DATA.find((d, i) => i > 0 && d[mMesaKey] > d.m_uln);
+            const femaleCross = DATA.find((d, i) => i > 0 && d[fMesaKey] > d.f_uln);
+
+            // Canonical individual MESA values
+            const coeff = MESA_COEFF[mesaParam];
+            const canon = {
+                m_mesa: coeff.m * CANONICAL.male.bsa,
+                f_mesa: coeff.f * CANONICAL.female.bsa,
+                m_delta: (coeff.m * CANONICAL.male.bsa) - CANONICAL.male.shiwani_uln,
+                f_delta: (coeff.f * CANONICAL.female.bsa) - CANONICAL.female.shiwani_uln,
+            };
+            const canonX_m = xAxis === 'bsa' ? CANONICAL.male.bsa : CANONICAL.male.height;
+            const canonX_f = xAxis === 'bsa' ? CANONICAL.female.bsa : CANONICAL.female.height;
+
+            // Responsive width
+            const chartWidth = Math.min(940, window.innerWidth - 60);
+
+            return (
+                <div className="container">
+                    <div className="header">
+                        <h1>Maximal Wall Thickness: Multivariable Model vs Ratiometric Scaling</h1>
+                        <div className="subtitle">
+                            Shiwani 2025 GAMM (CMR, age=55, BMI=24) vs Strom/MESA ratiometric (mean + 2SD)
+                        </div>
+                    </div>
+
+                    <div className="controls">
+                        <div className="btn-group">
+                            <button className={sex === 'both' ? 'active' : ''} onClick={() => setSex('both')}>Both Sexes</button>
+                            <button className={sex === 'male' ? 'active' : ''} onClick={() => setSex('male')}>Male</button>
+                            <button className={sex === 'female' ? 'active' : ''} onClick={() => setSex('female')}>Female</button>
+                        </div>
+                        <div className="btn-group axis">
+                            <button className={xAxis === 'bsa' ? 'active' : ''} onClick={() => setXAxis('bsa')}>BSA</button>
+                            <button className={xAxis === 'height' ? 'active' : ''} onClick={() => setXAxis('height')}>Height</button>
+                        </div>
+                        <div className="btn-group" style={{ background: '#fce7f3' }}>
+                            <button className={mesaParam === 'ivs' ? 'active' : ''} onClick={() => setMesaParam('ivs')}
+                                style={mesaParam === 'ivs' ? { background: '#9f1239', color: '#fff', fontWeight: 600, padding: '6px 14px', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13 } : { padding: '6px 14px', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, background: 'transparent', color: '#9f1239' }}>
+                                MESA: IVS
+                            </button>
+                            <button className={mesaParam === 'lvpw' ? 'active' : ''} onClick={() => setMesaParam('lvpw')}
+                                style={mesaParam === 'lvpw' ? { background: '#9f1239', color: '#fff', fontWeight: 600, padding: '6px 14px', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13 } : { padding: '6px 14px', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, background: 'transparent', color: '#9f1239' }}>
+                                MESA: LVPW
+                            </button>
+                        </div>
+                        <label className="checkbox-label">
+                            <input type="checkbox" checked={showMean} onChange={e => setShowMean(e.target.checked)} />
+                            Show Mean MWT
+                        </label>
+                        <label className="checkbox-label">
+                            <input type="checkbox" checked={showHCM} onChange={e => setShowHCM(e.target.checked)} />
+                            HCM ≥15mm
+                        </label>
+                    </div>
+
+                    <div style={{ textAlign: 'center', fontSize: 12, color: '#9f1239', marginBottom: 12, fontStyle: 'italic' }}>
+                        MESA {mesaLabel}/BSA: {mesaDetail}
+                    </div>
+
+                    <div className="chart-container">
+                        <LineChart width={chartWidth} height={440} data={DATA} margin={{ top: 10, right: 30, left: 20, bottom: 50 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                            <XAxis
+                                dataKey={xAxis}
+                                type="number"
+                                domain={xAxis === 'bsa' ? [1.0, 2.7] : [120, 220]}
+                                label={{ value: xLabel, position: 'insideBottom', offset: -10, style: { fontSize: 13, fill: '#475569' } }}
+                            />
+                            <YAxis
+                                domain={[6, 24]}
+                                label={{ value: 'Wall Thickness (mm)', angle: -90, position: 'insideLeft', offset: 0, style: { fontSize: 13, fill: '#475569' } }}
+                            />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Legend verticalAlign="top" wrapperStyle={{ fontSize: 12, paddingBottom: 10 }} />
+
+                            {showHCM && (
+                                <ReferenceLine y={15} stroke="#9333ea" strokeDasharray="6 4" strokeWidth={1.5}
+                                    label={{ value: 'HCM ≥15mm', position: 'right', fill: '#9333ea', fontSize: 11 }} />
+                            )}
+
+                            {/* Average male/female vertical reference lines */}
+                            {(sex === 'both' || sex === 'male') && (
+                                <ReferenceLine
+                                    x={xAxis === 'bsa' ? 1.939 : 178}
+                                    stroke="#1e40af"
+                                    strokeDasharray="4 3"
+                                    strokeWidth={1.2}
+                                    strokeOpacity={0.5}
+                                    label={{ value: '♂ avg', position: 'top', fill: '#1e40af', fontSize: 11 }}
+                                />
+                            )}
+                            {(sex === 'both' || sex === 'female') && (
+                                <ReferenceLine
+                                    x={xAxis === 'bsa' ? 1.715 : 164}
+                                    stroke="#dc2626"
+                                    strokeDasharray="4 3"
+                                    strokeWidth={1.2}
+                                    strokeOpacity={0.5}
+                                    label={{ value: '♀ avg', position: 'top', fill: '#dc2626', fontSize: 11 }}
+                                />
+                            )}
+
+                            {/* Canonical individual markers */}
+                            {(sex === 'both' || sex === 'male') && (
+                                <>
+                                    <ReferenceDot x={canonX_m} y={CANONICAL.male.shiwani_uln} r={5} fill="#1e40af" stroke="#fff" strokeWidth={2} />
+                                    <ReferenceDot x={canonX_m} y={canon.m_mesa} r={5} fill="#1e40af" stroke="#fff" strokeWidth={2} fillOpacity={0.4} />
+                                </>
+                            )}
+                            {(sex === 'both' || sex === 'female') && (
+                                <>
+                                    <ReferenceDot x={canonX_f} y={CANONICAL.female.shiwani_uln} r={5} fill="#dc2626" stroke="#fff" strokeWidth={2} />
+                                    <ReferenceDot x={canonX_f} y={canon.f_mesa} r={5} fill="#dc2626" stroke="#fff" strokeWidth={2} fillOpacity={0.4} />
+                                </>
+                            )}
+
+                            {/* Male */}
+                            {(sex === 'both' || sex === 'male') && (
+                                <>
+                                    <Line type="monotone" dataKey="m_uln" stroke="#1e40af" strokeWidth={2.5}
+                                        name="♂ ULN (Shiwani GAMM)" dot={false} isAnimationActive={false} />
+                                    <Line type="monotone" dataKey={mMesaKey} stroke="#1e40af" strokeWidth={2}
+                                        strokeDasharray="8 4" name={'♂ ULN (MESA ' + mesaLabel + ')'} dot={false} isAnimationActive={false} />
+                                    {showMean && (
+                                        <Line type="monotone" dataKey="m_mwt" stroke="#93c5fd" strokeWidth={1.5}
+                                            name="♂ Mean (Shiwani)" dot={false} isAnimationActive={false} />
+                                    )}
+                                </>
+                            )}
+
+                            {/* Female */}
+                            {(sex === 'both' || sex === 'female') && (
+                                <>
+                                    <Line type="monotone" dataKey="f_uln" stroke="#dc2626" strokeWidth={2.5}
+                                        name="♀ ULN (Shiwani GAMM)" dot={false} isAnimationActive={false} />
+                                    <Line type="monotone" dataKey={fMesaKey} stroke="#dc2626" strokeWidth={2}
+                                        strokeDasharray="8 4" name={'♀ ULN (MESA ' + mesaLabel + ')'} dot={false} isAnimationActive={false} />
+                                    {showMean && (
+                                        <Line type="monotone" dataKey="f_mwt" stroke="#fca5a5" strokeWidth={1.5}
+                                            name="♀ Mean (Shiwani)" dot={false} isAnimationActive={false} />
+                                    )}
+                                </>
+                            )}
+                        </LineChart>
+                    </div>
+
+                    <div className="cards" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+                        <div className="card card-blue">
+                            <h3>Key Observation</h3>
+                            <p>
+                                {mesaParam === 'ivs'
+                                    ? <>The IVS ratiometric curves (dashed) <strong>cross</strong> the Shiwani GAMM curves (solid) <em>below</em> the population mean. For most adults, the ratiometric ULN is already too high — large patients are <strong>under-diagnosed</strong>.</>
+                                    : <>The LVPW ratiometric curves (dashed) stay below the GAMM curves across most of the range, crossing only at very large body sizes. The ratiometric slope is shallower, but it <strong>still predicts F {'>'} M</strong> — the opposite of biology.</>
+                                }
+                            </p>
+                        </div>
+
+                        <div className="card" style={{ background: '#fefce8', borderColor: '#fde68a', borderWidth: 1, borderStyle: 'solid', borderRadius: 10, padding: 14 }}>
+                            <h3 style={{ color: '#92400e', fontSize: 14, fontWeight: 700, marginBottom: 6 }}>Gap at Population Mean</h3>
+                            {(sex === 'both' || sex === 'male') && (
+                                <p style={{ fontSize: 13, color: '#78350f', lineHeight: 1.55, marginBottom: sex === 'both' ? 6 : 0 }}>
+                                    <span style={{ color: '#1e40af' }}>♂</span> (BSA {CANONICAL.male.bsa}, {CANONICAL.male.height} cm):<br/>
+                                    Ratio = <strong>{canon.m_mesa.toFixed(1)}</strong> vs GAMM = <strong>{CANONICAL.male.shiwani_uln}</strong> mm
+                                    → <strong style={{ color: canon.m_delta > 0 ? '#dc2626' : '#16a34a' }}>{canon.m_delta > 0 ? '+' : ''}{canon.m_delta.toFixed(1)} mm</strong>
+                                </p>
+                            )}
+                            {(sex === 'both' || sex === 'female') && (
+                                <p style={{ fontSize: 13, color: '#78350f', lineHeight: 1.55 }}>
+                                    <span style={{ color: '#dc2626' }}>♀</span> (BSA {CANONICAL.female.bsa}, {CANONICAL.female.height} cm):<br/>
+                                    Ratio = <strong>{canon.f_mesa.toFixed(1)}</strong> vs GAMM = <strong>{CANONICAL.female.shiwani_uln}</strong> mm
+                                    → <strong style={{ color: canon.f_delta > 0 ? '#dc2626' : '#16a34a' }}>{canon.f_delta > 0 ? '+' : ''}{canon.f_delta.toFixed(1)} mm</strong>
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="card card-red">
+                            <h3>Gap at Extremes (BSA 2.66 / 220 cm)</h3>
+                            {(sex === 'both' || sex === 'male') && (
+                                <p style={{ marginBottom: sex === 'both' ? 6 : 0 }}>
+                                    <span style={{ color: '#1e40af' }}>♂</span> Ratio ({mesaLabel}) = <strong>{DATA[DATA.length-1][mMesaKey].toFixed(1)}</strong> vs
+                                    Shiwani = <strong>{DATA[DATA.length-1].m_uln.toFixed(1)}</strong> mm
+                                    → <strong>{(DATA[DATA.length-1][mMesaKey] - DATA[DATA.length-1].m_uln).toFixed(1)} mm</strong>
+                                </p>
+                            )}
+                            {(sex === 'both' || sex === 'female') && (
+                                <p>
+                                    <span style={{ color: '#dc2626' }}>♀</span> Ratio ({mesaLabel}) = <strong>{DATA[DATA.length-1][fMesaKey].toFixed(1)}</strong> vs
+                                    Shiwani = <strong>{DATA[DATA.length-1].f_uln.toFixed(1)}</strong> mm
+                                    → <strong>{(DATA[DATA.length-1][fMesaKey] - DATA[DATA.length-1].f_uln).toFixed(1)} mm</strong>
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    {(maleCross || femaleCross) && (
+                        <div className="card card-purple" style={{ marginTop: 12 }}>
+                            <h3>Crossover Points ({mesaLabel} Ratio exceeds GAMM)</h3>
+                            <div className="crossover-row">
+                                {maleCross
+                                    ? <span className="crossover-male">♂ BSA ~{maleCross.bsa} m² ({maleCross.height} cm) — avg ♂ = 1.94 m² / 178 cm</span>
+                                    : <span className="crossover-male">♂ No crossover in range (ratio stays below GAMM)</span>
+                                }
+                                {femaleCross
+                                    ? <span className="crossover-female">♀ BSA ~{femaleCross.bsa} m² ({femaleCross.height} cm) — avg ♀ = 1.72 m² / 164 cm</span>
+                                    : <span className="crossover-female">♀ No crossover in range (ratio stays below GAMM)</span>
+                                }
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="footer">
+                        Shiwani: GAMM 95% PI from CMR (n=5,067 healthy) &nbsp;|&nbsp; MESA: Strom {mesaLabel}/BSA (mean+2SD) × BSA &nbsp;|&nbsp; Age=55, BMI=24
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

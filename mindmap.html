@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indexing Mind Map</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f1729;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;overflow:hidden}
+svg{width:100vw;height:100vh}
+@keyframes pulse{0%,100%{opacity:.18}50%{opacity:.35}}
+.cg{animation:pulse 4s ease-in-out infinite}
+</style>
+</head>
+<body>
+<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<filter id="gl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="12" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="sg" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<linearGradient id="gr" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#7c3aed" stop-opacity=".9"/><stop offset="100%" stop-color="#ef4444" stop-opacity=".8"/></linearGradient>
+<linearGradient id="ga" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#7c3aed" stop-opacity=".9"/><stop offset="100%" stop-color="#f59e0b" stop-opacity=".8"/></linearGradient>
+<linearGradient id="gg" x1="50%" y1="0%" x2="50%" y2="100%"><stop offset="0%" stop-color="#7c3aed" stop-opacity=".9"/><stop offset="100%" stop-color="#10b981" stop-opacity=".8"/></linearGradient>
+<radialGradient id="bg" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="#1e1b4b"/><stop offset="100%" stop-color="#0f1729"/></radialGradient>
+</defs>
+
+<rect width="1920" height="1080" fill="url(#bg)"/>
+<g opacity=".06"><pattern id="d" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="1" fill="#a5b4fc"/></pattern><rect width="1920" height="1080" fill="url(#d)"/></g>
+
+<!-- Branch 1 lines (red) -->
+<g opacity=".7">
+<path d="M960,540 C750,540 650,280 480,240" stroke="url(#gr)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+<path d="M480,240 C400,230 320,170 240,155" stroke="#ef4444" stroke-width="2" fill="none" opacity=".5" stroke-linecap="round"/>
+<path d="M480,240 C380,260 310,280 200,290" stroke="#ef4444" stroke-width="2" fill="none" opacity=".5" stroke-linecap="round"/>
+<path d="M480,240 C420,300 360,360 260,410" stroke="#ef4444" stroke-width="2" fill="none" opacity=".5" stroke-linecap="round"/>
+</g>
+
+<!-- Branch 2 lines (amber) -->
+<g opacity=".7">
+<path d="M960,540 C1170,540 1270,280 1440,240" stroke="url(#ga)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+<path d="M1440,240 C1520,230 1600,170 1680,155" stroke="#f59e0b" stroke-width="2" fill="none" opacity=".5" stroke-linecap="round"/>
+<path d="M1440,240 C1540,260 1610,280 1720,290" stroke="#f59e0b" stroke-width="2" fill="none" opacity=".5" stroke-linecap="round"/>
+<path d="M1440,240 C1500,300 1560,360 1660,410" stroke="#f59e0b" stroke-width="2" fill="none" opacity=".5" stroke-linecap="round"/>
+</g>
+
+<!-- Branch 3 lines (green) -->
+<g opacity=".7">
+<path d="M960,540 C960,680 960,760 960,820" stroke="url(#gg)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+<path d="M960,820 C860,850 750,870 660,900" stroke="#10b981" stroke-width="2" fill="none" opacity=".5" stroke-linecap="round"/>
+<path d="M960,820 C960,870 960,910 960,960" stroke="#10b981" stroke-width="2" fill="none" opacity=".5" stroke-linecap="round"/>
+<path d="M960,820 C1060,850 1170,870 1260,900" stroke="#10b981" stroke-width="2" fill="none" opacity=".5" stroke-linecap="round"/>
+</g>
+
+<!-- Center node -->
+<g filter="url(#gl)">
+<circle cx="960" cy="540" r="115" fill="#7c3aed" opacity=".18" class="cg"/>
+<circle cx="960" cy="540" r="90" fill="#1e1b4b" stroke="#7c3aed" stroke-width="3"/>
+<circle cx="960" cy="540" r="85" fill="none" stroke="#a78bfa" stroke-width="1" opacity=".3"/>
+<line x1="960" y1="470" x2="960" y2="500" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+<line x1="960" y1="580" x2="960" y2="610" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+<line x1="890" y1="540" x2="920" y2="540" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+<line x1="1000" y1="540" x2="1030" y2="540" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+<text x="960" y="530" text-anchor="middle" fill="#e9d5ff" font-size="17" font-weight="700">THE PROBLEM</text>
+<text x="960" y="552" text-anchor="middle" fill="#e9d5ff" font-size="17" font-weight="700">WITH INDEXING</text>
+<text x="960" y="578" text-anchor="middle" fill="#a78bfa" font-size="11" letter-spacing="1.5" opacity=".7">PRECISION MEDICINE ERA</text>
+</g>
+
+<!-- Branch 1: IMPOSSIBLE SITUATIONS -->
+<g filter="url(#sg)">
+<rect x="370" y="205" width="220" height="70" rx="35" fill="#1c1131" stroke="#ef4444" stroke-width="2.5"/>
+<text x="480" y="237" text-anchor="middle" fill="#fca5a5" font-size="13" font-weight="600">IMPOSSIBLE</text>
+<text x="480" y="257" text-anchor="middle" fill="#fca5a5" font-size="13" font-weight="600">SITUATIONS</text>
+<rect x="100" y="128" width="280" height="52" rx="26" fill="#1c1131" stroke="#ef4444" stroke-width="1.2" opacity=".8"/>
+<text x="120" y="149" fill="#fca5a5" font-size="11.5" font-weight="600">LV Mass Contradiction</text>
+<text x="120" y="168" fill="#fecaca" font-size="10.5" opacity=".75">Larger walls + diameter &#x2260; larger mass</text>
+<rect x="60" y="263" width="280" height="52" rx="26" fill="#1c1131" stroke="#ef4444" stroke-width="1.2" opacity=".8"/>
+<text x="80" y="284" fill="#fca5a5" font-size="11.5" font-weight="600">Tricuspid Valve Paradox</text>
+<text x="80" y="303" fill="#fecaca" font-size="10.5" opacity=".75">Larger perimeter &#x2260; larger area</text>
+<rect x="120" y="383" width="280" height="52" rx="26" fill="#1c1131" stroke="#ef4444" stroke-width="1.2" opacity=".8"/>
+<text x="140" y="404" fill="#fca5a5" font-size="11.5" font-weight="600">Stroke Volume Paradox</text>
+<text x="140" y="423" fill="#fecaca" font-size="10.5" opacity=".75">Larger D + VTI &#x2260; larger SV</text>
+</g>
+
+<!-- Branch 2: SCALING ARTIFACTS -->
+<g filter="url(#sg)">
+<rect x="1330" y="205" width="220" height="70" rx="35" fill="#1c1131" stroke="#f59e0b" stroke-width="2.5"/>
+<text x="1440" y="237" text-anchor="middle" fill="#fcd34d" font-size="13" font-weight="600">SCALING</text>
+<text x="1440" y="257" text-anchor="middle" fill="#fcd34d" font-size="13" font-weight="600">ARTIFACTS</text>
+<rect x="1540" y="128" width="300" height="52" rx="26" fill="#1c1131" stroke="#f59e0b" stroke-width="1.2" opacity=".8"/>
+<text x="1560" y="149" fill="#fcd34d" font-size="11.5" font-weight="600">Not True Biology</text>
+<text x="1560" y="168" fill="#fef3c7" font-size="10.5" opacity=".75">Contradictions are method-created</text>
+<rect x="1580" y="263" width="300" height="52" rx="26" fill="#1c1131" stroke="#f59e0b" stroke-width="1.2" opacity=".8"/>
+<text x="1600" y="284" fill="#fcd34d" font-size="11.5" font-weight="600">Systematic Bias</text>
+<text x="1600" y="303" fill="#fef3c7" font-size="10.5" opacity=".75">Small patients &#x2191; / Large patients &#x2193;</text>
+<rect x="1520" y="383" width="300" height="52" rx="26" fill="#1c1131" stroke="#f59e0b" stroke-width="1.2" opacity=".8"/>
+<text x="1540" y="404" fill="#fcd34d" font-size="11.5" font-weight="600">Artificial Sex Differences</text>
+<text x="1540" y="423" fill="#fef3c7" font-size="10.5" opacity=".75">Method creates, not reveals, disparities</text>
+</g>
+
+<!-- Branch 3: FORCED LINEARITY -->
+<g filter="url(#sg)">
+<rect x="850" y="785" width="220" height="70" rx="35" fill="#1c1131" stroke="#10b981" stroke-width="2.5"/>
+<text x="960" y="817" text-anchor="middle" fill="#6ee7b7" font-size="13" font-weight="600">FORCED</text>
+<text x="960" y="837" text-anchor="middle" fill="#6ee7b7" font-size="13" font-weight="600">LINEARITY</text>
+<rect x="500" y="873" width="320" height="52" rx="26" fill="#1c1131" stroke="#10b981" stroke-width="1.2" opacity=".8"/>
+<text x="520" y="894" fill="#6ee7b7" font-size="11.5" font-weight="600">Line Through (0, 0)</text>
+<text x="520" y="913" fill="#d1fae5" font-size="10.5" opacity=".75">Measurement = IndexedValue &#xd7; BSA</text>
+<rect x="800" y="933" width="320" height="52" rx="26" fill="#1c1131" stroke="#10b981" stroke-width="1.2" opacity=".8"/>
+<text x="820" y="954" fill="#6ee7b7" font-size="11.5" font-weight="600">Biology Is Nonlinear</text>
+<text x="820" y="973" fill="#d1fae5" font-size="10.5" opacity=".75">Curves, not lines &#x2014; newborns have hearts</text>
+<rect x="1100" y="873" width="320" height="52" rx="26" fill="#1c1131" stroke="#10b981" stroke-width="1.2" opacity=".8"/>
+<text x="1120" y="894" fill="#6ee7b7" font-size="11.5" font-weight="600">Accurate at Only One Point</text>
+<text x="1120" y="913" fill="#d1fae5" font-size="10.5" opacity=".75">Calibrated to population average only</text>
+</g>
+
+<!-- Theme labels -->
+<text x="620" y="470" text-anchor="middle" fill="#c4b5fd" font-size="10" letter-spacing="2" opacity=".4" transform="rotate(-30,620,470)">MATHEMATICAL PROOF</text>
+<text x="1300" y="470" text-anchor="middle" fill="#c4b5fd" font-size="10" letter-spacing="2" opacity=".4" transform="rotate(30,1300,470)">CLINICAL IMPACT</text>
+<text x="960" y="710" text-anchor="middle" fill="#c4b5fd" font-size="10" letter-spacing="2" opacity=".4">ROOT CAUSE</text>
+
+<!-- Title -->
+<text x="960" y="50" text-anchor="middle" fill="#e2e8f0" font-size="22" font-weight="300" letter-spacing="4" opacity=".6">INDEXING IN THE PRECISION MEDICINE ERA</text>
+<line x1="760" y1="62" x2="1160" y2="62" stroke="#7c3aed" stroke-width="1" opacity=".3"/>
+
+<!-- Footer -->
+<g opacity=".25"><text x="40" y="1050" fill="#94a3b8" font-size="11" font-family="monospace">Value/BSA assumes: Value = k &#xd7; BSA &#x2192; line through origin</text></g>
+<g opacity=".3"><text x="1880" y="1060" text-anchor="end" fill="#94a3b8" font-size="10">Dyar, Echegaray, Alshawabkeh &#xb7; UCSD</text></g>
+</svg>
+</body>
+</html>
