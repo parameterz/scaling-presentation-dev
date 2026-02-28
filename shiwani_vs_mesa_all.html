@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MWT: GAMM vs All Ratiometric Methods</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif; background: #f8fafc; color: #1e293b; line-height: 1.5; }
+        .container { max-width: 1060px; margin: 0 auto; padding: 24px 20px; }
+        .header { text-align: center; margin-bottom: 16px; }
+        .header h1 { font-size: 22px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+        .header .subtitle { font-size: 14px; color: #64748b; }
+        .controls { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
+        .btn-group { display: flex; gap: 3px; background: #e2e8f0; border-radius: 8px; padding: 3px; }
+        .btn-group button {
+            padding: 5px 13px; border: none; border-radius: 6px; cursor: pointer;
+            font-size: 12px; font-weight: 400; font-family: inherit;
+            background: transparent; color: #475569; transition: all 0.15s ease;
+        }
+        .btn-group button.active { background: #1e40af; color: #fff; font-weight: 600; }
+        .btn-group.wall button.active { background: #9f1239; }
+        .btn-group.axis button.active { background: #6366f1; }
+        .checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; color: #475569; }
+        .chart-container { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 16px 12px 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow-x: auto; }
+        .legend-box { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-bottom: 12px; font-size: 12px; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-swatch { width: 28px; height: 3px; border-radius: 2px; }
+        .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+        @media (max-width: 640px) { .cards { grid-template-columns: 1fr !important; } }
+        .card { border-radius: 10px; padding: 14px; border: 1px solid; }
+        .card h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+        .card p, .card li { font-size: 13px; line-height: 1.55; }
+        .card ul { padding-left: 16px; margin: 4px 0 0; }
+        .card-blue { background: #eff6ff; border-color: #bfdbfe; }
+        .card-blue h3 { color: #1e40af; }
+        .card-amber { background: #fffbeb; border-color: #fde68a; }
+        .card-amber h3 { color: #92400e; }
+        .card-purple { background: #f5f3ff; border-color: #ddd6fe; }
+        .card-purple h3 { color: #6d28d9; }
+        .card-red { background: #fef2f2; border-color: #fecaca; }
+        .card-red h3 { color: #dc2626; }
+        .footer { text-align: center; margin-top: 16px; font-size: 11px; color: #94a3b8; }
+        .custom-tooltip { background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; font-size: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 320px; }
+        .custom-tooltip .tt-header { font-weight: 700; margin-bottom: 4px; color: #0f172a; font-size: 13px; }
+        .custom-tooltip .tt-section { margin-top: 6px; padding-top: 6px; border-top: 1px solid #e2e8f0; }
+        .custom-tooltip .tt-row { padding: 1px 0; display: flex; justify-content: space-between; gap: 12px; }
+        .method-detail { text-align: center; font-size: 12px; color: #64748b; margin-bottom: 12px; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useMemo } = React;
+        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine } = Recharts;
+
+        // Strom/MESA Table 3 coefficients: { mean, sd } in original units
+        // IVS and LVPW, indexed to various scalars
+        const STROM = {
+            ivs: {
+                m: { bsa: {m:0.61,s:0.11}, bmi: {m:0.04,s:0.01}, height: {m:0.68,s:0.13}, h16: {m:0.49,s:0.10}, h27: {m:0.27,s:0.08} },
+                f: { bsa: {m:0.60,s:0.13}, bmi: {m:0.04,s:0.01}, height: {m:0.64,s:0.14}, h16: {m:0.48,s:0.11}, h27: {m:0.29,s:0.07} },
+            },
+            lvpw: {
+                m: { bsa: {m:0.50,s:0.07}, bmi: {m:0.04,s:0.01}, height: {m:0.55,s:0.08}, h16: {m:0.40,s:0.06}, h27: {m:0.22,s:0.04} },
+                f: { bsa: {m:0.51,s:0.07}, bmi: {m:0.03,s:0.01}, height: {m:0.54,s:0.07}, h16: {m:0.40,s:0.06}, h27: {m:0.24,s:0.04} },
+            },
+        };
+
+        const METHODS = [
+            { key: 'bsa',    label: 'BSA',       color: '#6366f1', dash: '8 4' },
+            { key: 'bmi',    label: 'BMI',        color: '#14b8a6', dash: '4 4' },
+            { key: 'height', label: 'Height',     color: '#f97316', dash: '12 4' },
+            { key: 'h16',    label: 'Height¹·⁶',  color: '#ec4899', dash: '6 6' },
+            { key: 'h27',    label: 'Height²·⁷',  color: '#84cc16', dash: '2 4' },
+        ];
+
+        // Canonical reference individuals
+        const CANONICAL = {
+            m: { height: 178, weight: 76.04, bsa: 1.939, bmi: 24, shiwani_mean: 11.3, shiwani_uln: 14.1 },
+            f: { height: 164, weight: 64.55, bsa: 1.715, bmi: 24, shiwani_mean: 9.2, shiwani_uln: 12.0 },
+        };
+
+        // Shiwani GAMM data from calculator (age=55, BMI=24)
+        const SHIWANI = {
+            m: [
+                {h:120,mean:9.0,uln:11.9},{h:125,mean:9.0,uln:11.9},{h:130,mean:9.0,uln:11.9},
+                {h:135,mean:9.3,uln:12.1},{h:140,mean:9.5,uln:12.3},{h:145,mean:9.8,uln:12.6},
+                {h:150,mean:10.0,uln:12.8},{h:155,mean:10.2,uln:13.0},{h:160,mean:10.4,uln:13.2},
+                {h:164,mean:10.6,uln:13.4},{h:165,mean:10.6,uln:13.4},{h:170,mean:10.8,uln:13.6},
+                {h:175,mean:11.1,uln:13.9},{h:178,mean:11.3,uln:14.1},{h:180,mean:11.4,uln:14.2},
+                {h:185,mean:11.7,uln:14.6},{h:190,mean:12.2,uln:15.0},{h:195,mean:12.4,uln:15.3},
+                {h:200,mean:12.7,uln:15.5},{h:205,mean:12.9,uln:15.7},{h:210,mean:13.1,uln:15.9},
+                {h:215,mean:13.1,uln:16.0},{h:220,mean:13.1,uln:16.0},
+            ],
+            f: [
+                {h:120,mean:7.7,uln:10.5},{h:125,mean:7.7,uln:10.5},{h:130,mean:7.7,uln:10.5},
+                {h:135,mean:7.9,uln:10.8},{h:140,mean:8.2,uln:11.0},{h:145,mean:8.4,uln:11.3},
+                {h:150,mean:8.7,uln:11.5},{h:155,mean:8.9,uln:11.7},{h:160,mean:9.1,uln:11.9},
+                {h:164,mean:9.2,uln:12.0},{h:165,mean:9.3,uln:12.1},{h:170,mean:9.5,uln:12.3},
+                {h:175,mean:9.8,uln:12.6},{h:178,mean:10.0,uln:12.8},{h:180,mean:10.1,uln:12.9},
+                {h:185,mean:10.4,uln:13.2},{h:190,mean:10.8,uln:13.7},{h:195,mean:11.1,uln:14.0},
+                {h:200,mean:11.4,uln:14.2},{h:205,mean:11.6,uln:14.4},{h:210,mean:11.8,uln:14.6},
+                {h:215,mean:11.8,uln:14.7},{h:220,mean:11.8,uln:14.7},
+            ],
+        };
+
+        // Compute scalar value for a given method at given height/bmi=24
+        function getScalar(method, heightCm, bsa, bmi) {
+            const hm = heightCm / 100;
+            switch(method) {
+                case 'bsa': return bsa;
+                case 'bmi': return bmi;
+                case 'height': return hm;
+                case 'h16': return Math.pow(hm, 1.6);
+                case 'h27': return Math.pow(hm, 2.7);
+            }
+        }
+
+        // Build dataset dynamically
+        function buildData(sex, wall, bmi, enabledMethods) {
+            const shiwani = SHIWANI[sex];
+            const strom = STROM[wall][sex];
+            return shiwani.map(row => {
+                const h = row.h;
+                const w = bmi * Math.pow(h/100, 2);
+                const bsa = Math.sqrt(h * w / 3600); // Mosteller
+                const isCanon = (sex === 'm' && h === 178) || (sex === 'f' && h === 164);
+                const d = {
+                    height: h,
+                    bsa: parseFloat(bsa.toFixed(3)),
+                    gamm_uln: row.uln,
+                    gamm_mean: row.mean,
+                    canon: isCanon ? sex : null,
+                };
+                // Compute each ratiometric ULN: (mean + 2*sd) * scalar, convert to mm
+                for (const meth of METHODS) {
+                    if (!enabledMethods[meth.key]) continue;
+                    const coeff = strom[meth.key];
+                    const uln_indexed = coeff.m + 2 * coeff.s; // in cm per unit
+                    const scalar = getScalar(meth.key, h, bsa, bmi);
+                    d['uln_' + meth.key] = parseFloat((uln_indexed * scalar * 10).toFixed(2)); // cm → mm
+                }
+                return d;
+            });
+        }
+
+        function canonDot(color, sex) {
+            return function(props) {
+                const { cx, cy, payload } = props;
+                if (!payload || payload.canon !== sex) return null;
+                return <circle cx={cx} cy={cy} r={5} fill={color} stroke="#fff" strokeWidth={2} />;
+            };
+        }
+
+        function CustomTooltip({ active, payload }) {
+            if (!active || !payload || payload.length === 0) return null;
+            const d = payload[0].payload;
+            const isCanon = d.canon;
+            const canonLabel = isCanon === 'm' ? '★ Avg Male (178 cm, 76 kg)' : isCanon === 'f' ? '★ Avg Female (164 cm, 65 kg)' : null;
+            // Separate GAMM from ratiometric
+            const gamm = payload.filter(p => p.dataKey.startsWith('gamm_'));
+            const ratio = payload.filter(p => p.dataKey.startsWith('uln_'));
+            return (
+                <div className="custom-tooltip" style={isCanon ? { borderColor: '#f59e0b', borderWidth: 2 } : {}}>
+                    {canonLabel && <div style={{ fontWeight: 700, color: '#b45309', marginBottom: 4 }}>{canonLabel}</div>}
+                    <div className="tt-header">BSA: {d.bsa} m² — Height: {d.height} cm</div>
+                    {gamm.map((p, i) => (
+                        <div key={i} className="tt-row">
+                            <span style={{ color: p.color }}>{p.name}</span>
+                            <strong>{typeof p.value === 'number' ? p.value.toFixed(1) : p.value} mm</strong>
+                        </div>
+                    ))}
+                    {ratio.length > 0 && (
+                        <div className="tt-section">
+                            {ratio.map((p, i) => (
+                                <div key={i} className="tt-row">
+                                    <span style={{ color: p.color }}>{p.name}</span>
+                                    <strong>{typeof p.value === 'number' ? p.value.toFixed(1) : p.value} mm</strong>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function App() {
+            const [sex, setSex] = useState('m');
+            const [wall, setWall] = useState('ivs');
+            const [xAxis, setXAxis] = useState('bsa');
+            const [showMean, setShowMean] = useState(false);
+            const [showHCM, setShowHCM] = useState(false);
+            const [enabled, setEnabled] = useState({ bsa: true, bmi: true, height: true, h16: true, h27: true });
+
+            const toggleMethod = (key) => setEnabled(prev => ({ ...prev, [key]: !prev[key] }));
+
+            const sexLabel = sex === 'm' ? 'Male' : 'Female';
+            const wallLabel = wall === 'ivs' ? 'IVS' : 'LVPW';
+            const sexColor = sex === 'm' ? '#1e40af' : '#dc2626';
+
+            const data = useMemo(() => buildData(sex, wall, 24, enabled), [sex, wall, enabled]);
+            const chartWidth = Math.min(1020, typeof window !== 'undefined' ? window.innerWidth - 60 : 960);
+
+            // Strom coefficients for display
+            const strom = STROM[wall][sex];
+
+            // Canonical values
+            const canon = CANONICAL[sex];
+            const canonScalars = {
+                bsa: canon.bsa,
+                bmi: canon.bmi,
+                height: canon.height / 100,
+                h16: Math.pow(canon.height / 100, 1.6),
+                h27: Math.pow(canon.height / 100, 2.7),
+            };
+
+            return (
+                <div className="container">
+                    <div className="header">
+                        <h1>All Ratiometric Methods vs Multivariable GAMM</h1>
+                        <div className="subtitle">
+                            Shiwani 2025 GAMM (CMR, age=55, BMI=24) vs Strom/MESA Table 3 (mean + 2SD)
+                        </div>
+                    </div>
+
+                    <div className="controls">
+                        <div className="btn-group">
+                            <button className={sex === 'm' ? 'active' : ''} onClick={() => setSex('m')}>Male</button>
+                            <button className={sex === 'f' ? 'active' : ''} onClick={() => setSex('f')}>Female</button>
+                        </div>
+                        <div className="btn-group wall">
+                            <button className={wall === 'ivs' ? 'active' : ''} onClick={() => setWall('ivs')}>IVS</button>
+                            <button className={wall === 'lvpw' ? 'active' : ''} onClick={() => setWall('lvpw')}>LVPW</button>
+                        </div>
+                        <div className="btn-group axis">
+                            <button className={xAxis === 'bsa' ? 'active' : ''} onClick={() => setXAxis('bsa')}>BSA</button>
+                            <button className={xAxis === 'height' ? 'active' : ''} onClick={() => setXAxis('height')}>Height</button>
+                        </div>
+                        <label className="checkbox-label">
+                            <input type="checkbox" checked={showMean} onChange={e => setShowMean(e.target.checked)} />
+                            GAMM Mean
+                        </label>
+                        <label className="checkbox-label">
+                            <input type="checkbox" checked={showHCM} onChange={e => setShowHCM(e.target.checked)} />
+                            HCM 15mm
+                        </label>
+                    </div>
+
+                    {/* Method toggles */}
+                    <div className="legend-box">
+                        <div className="legend-item">
+                            <div className="legend-swatch" style={{ background: sexColor }}></div>
+                            <strong>GAMM ULN</strong> (solid)
+                        </div>
+                        {METHODS.map(m => (
+                            <label key={m.key} className="legend-item" style={{ cursor: 'pointer', opacity: enabled[m.key] ? 1 : 0.35 }}>
+                                <input type="checkbox" checked={enabled[m.key]} onChange={() => toggleMethod(m.key)}
+                                    style={{ display: 'none' }} />
+                                <div className="legend-swatch" style={{
+                                    background: `repeating-linear-gradient(90deg, ${m.color} 0px, ${m.color} 6px, transparent 6px, transparent 10px)`
+                                }}></div>
+                                <span style={{ color: m.color, fontWeight: enabled[m.key] ? 600 : 400 }}>{m.label}</span>
+                            </label>
+                        ))}
+                    </div>
+
+                    <div className="method-detail">
+                        {sexLabel} {wallLabel}/BSA coefficients — click legend items above to toggle methods
+                    </div>
+
+                    <div className="chart-container">
+                        <LineChart width={chartWidth} height={460} data={data} margin={{ top: 10, right: 30, left: 20, bottom: 50 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                            <XAxis
+                                dataKey={xAxis}
+                                type="number"
+                                domain={xAxis === 'bsa' ? [1.0, 2.7] : [120, 220]}
+                                label={{ value: xAxis === 'bsa' ? 'Body Surface Area (m²)' : 'Height (cm)', position: 'insideBottom', offset: -10, style: { fontSize: 13, fill: '#475569' } }}
+                            />
+                            <YAxis
+                                domain={[4, 26]}
+                                label={{ value: 'Wall Thickness (mm)', angle: -90, position: 'insideLeft', offset: 0, style: { fontSize: 13, fill: '#475569' } }}
+                            />
+                            <Tooltip content={<CustomTooltip />} />
+
+                            {showHCM && <ReferenceLine y={15} stroke="#9333ea" strokeDasharray="6 4" strokeWidth={1.5} />}
+
+                            {/* Avg vertical line */}
+                            <ReferenceLine
+                                x={xAxis === 'bsa' ? canon.bsa : canon.height}
+                                stroke={sexColor} strokeDasharray="4 3" strokeWidth={1} strokeOpacity={0.4}
+                                label={{ value: sexLabel + ' avg', position: 'top', fill: sexColor, fontSize: 10 }}
+                            />
+
+                            {/* GAMM ULN */}
+                            <Line type="monotone" dataKey="gamm_uln" stroke={sexColor} strokeWidth={3}
+                                name="GAMM ULN" dot={canonDot(sexColor, sex)} isAnimationActive={false} />
+                            {showMean && (
+                                <Line type="monotone" dataKey="gamm_mean" stroke={sexColor} strokeWidth={1.5} strokeOpacity={0.4}
+                                    name="GAMM Mean" dot={false} isAnimationActive={false} />
+                            )}
+
+                            {/* Ratiometric methods */}
+                            {METHODS.map(m => enabled[m.key] && (
+                                <Line key={m.key} type="monotone" dataKey={'uln_' + m.key}
+                                    stroke={m.color} strokeWidth={2} strokeDasharray={m.dash}
+                                    name={m.label + ' ratio'} dot={canonDot(m.color, sex)} isAnimationActive={false} />
+                            ))}
+                        </LineChart>
+                    </div>
+
+                    <div className="cards">
+                        <div className="card card-amber">
+                            <h3>Gap at {sexLabel} Population Mean (BSA {canon.bsa}, {canon.height} cm)</h3>
+                            <ul>
+                                {METHODS.map(m => {
+                                    if (!enabled[m.key]) return null;
+                                    const coeff = strom[m.key];
+                                    const uln_coeff = coeff.m + 2 * coeff.s;
+                                    const abs_uln = uln_coeff * canonScalars[m.key] * 10;
+                                    const delta = abs_uln - canon.shiwani_uln;
+                                    return (
+                                        <li key={m.key} style={{ color: m.color }}>
+                                            <strong>{m.label}</strong>: {abs_uln.toFixed(1)} mm
+                                            <span style={{ color: delta > 0 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>
+                                                {' '}({delta > 0 ? '+' : ''}{delta.toFixed(1)} mm)
+                                            </span>
+                                            <span style={{ color: '#94a3b8', fontSize: 11 }}>
+                                                {' '}[{coeff.m}±{coeff.s} → {uln_coeff.toFixed(2)}]
+                                            </span>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                            <p style={{ marginTop: 8, fontSize: 12, color: '#92400e' }}>
+                                GAMM ULN = <strong>{canon.shiwani_uln} mm</strong>
+                            </p>
+                        </div>
+
+                        <div className="card card-red">
+                            <h3>Gap at Extremes (BSA 2.66 / 220 cm)</h3>
+                            <ul>
+                                {METHODS.map(m => {
+                                    if (!enabled[m.key]) return null;
+                                    const last = data[data.length - 1];
+                                    const val = last['uln_' + m.key];
+                                    if (val == null) return null;
+                                    const delta = val - last.gamm_uln;
+                                    return (
+                                        <li key={m.key} style={{ color: m.color }}>
+                                            <strong>{m.label}</strong>: {val.toFixed(1)} mm
+                                            <span style={{ color: delta > 0 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>
+                                                {' '}({delta > 0 ? '+' : ''}{delta.toFixed(1)} mm)
+                                            </span>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                            <p style={{ marginTop: 8, fontSize: 12, color: '#7f1d1d' }}>
+                                GAMM ULN = <strong>{data.length > 0 ? data[data.length-1].gamm_uln.toFixed(1) : '—'} mm</strong>
+                            </p>
+                        </div>
+
+                        <div className="card card-blue">
+                            <h3>What This Shows</h3>
+                            <p>
+                                Every ratiometric method is a straight line forced through the origin. The GAMM (solid) captures
+                                the biological reality: wall thickness <strong>plateaus</strong> at large body sizes.
+                                Each dashed line diverges differently — BSA climbs fastest (largest scalar range),
+                                BMI is flat (fixed at 24), height-based methods fall in between — but
+                                <strong> none of them can model the plateau</strong>.
+                            </p>
+                        </div>
+
+                        <div className="card card-purple">
+                            <h3>F {'>'} M Inversion Check</h3>
+                            <p style={{ marginBottom: 6 }}>
+                                Does this method predict <strong>female ULN {'>'} male ULN</strong> at the same body size?
+                            </p>
+                            <ul>
+                                {METHODS.map(m => {
+                                    const mc = STROM[wall].m[m.key];
+                                    const fc = STROM[wall].f[m.key];
+                                    const m_uln = mc.m + 2 * mc.s;
+                                    const f_uln = fc.m + 2 * fc.s;
+                                    const inverted = f_uln > m_uln;
+                                    return (
+                                        <li key={m.key} style={{ color: m.color }}>
+                                            <strong>{m.label}</strong>: ♂ {m_uln.toFixed(2)} vs ♀ {f_uln.toFixed(2)}
+                                            {inverted
+                                                ? <span style={{ color: '#dc2626', fontWeight: 700 }}> ⚠ F{'>'} M</span>
+                                                : <span style={{ color: '#16a34a', fontWeight: 700 }}> ✓ M≥F</span>
+                                            }
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div className="footer">
+                        Shiwani: GAMM 95% PI from CMR (n=5,067 healthy) &nbsp;|&nbsp;
+                        MESA: Strom Table 3 {wallLabel} (mean+2SD) × scalar &nbsp;|&nbsp; Age=55, BMI=24
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

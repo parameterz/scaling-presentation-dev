@@ -1,1430 +1,505 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Indexing for the Precision Medicine Era</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.0.4/dist/reset.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.0.4/dist/reveal.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.0.4/dist/theme/white.css">
-    
-    <style>
-        /* Custom medical/clinical theme */
-        :root {
-            --male-color: #1e40af;
-            --female-color: #dc2626;
-            --warning-color: #f59e0b;
-            --success-color: #10b981;
-            --problem-color: #ef4444;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IVS Scaling — PHN Data vs Reference Standards</title>
 
-        .reveal {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
-        .reveal h1, .reveal h2, .reveal h3 {
-            font-weight: 700;
-            text-transform: none;
-        }
+  <!-- React + Recharts via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.8.0/umd/Recharts.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
 
-        .reveal h1 {
-            font-size: 2.5em;
-            color: #1e293b;
-        }
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        .reveal h2 {
-            font-size: 2em;
-            color: #334155;
-        }
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --border:   #30363d;
+      --text:     #e6edf3;
+      --muted:    #7d8590;
+      --male:     #58a6ff;
+      --female:   #ff7b72;
+      --mesa:     #ffa657;
+      --shiwani:  #3fb950;
+      --hcm:      #bc8cff;
+    }
 
-        /* Title slide styling */
-        .title-slide {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white !important;
-            padding: 2em;
-        }
+    body {
+      font-family: "DM Sans", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 32px 24px 56px;
+    }
 
-        .title-slide h1, .title-slide h2, .title-slide p {
-            color: white !important;
-        }
+    #root { max-width: 1080px; margin: 0 auto; }
 
-        /* Info boxes */
-        .info-box {
-            background: #f8fafc;
-            border-left: 4px solid #3b82f6;
-            padding: 1.5em;
-            margin: 1em 0;
-            border-radius: 0.5em;
-        }
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 60vh;
+      font-family: "DM Mono", monospace;
+      color: var(--muted);
+      font-size: 14px;
+      gap: 10px;
+    }
 
-        .warning-box {
-            background: #fef3c7;
-            border-left: 4px solid var(--warning-color);
-            padding: 1.5em;
-            margin: 1em 0;
-            border-radius: 0.5em;
-        }
-
-        .danger-box {
-            background: #fee2e2;
-            border-left: 4px solid var(--problem-color);
-            padding: 1.5em;
-            margin: 1em 0;
-            border-radius: 0.5em;
-        }
-
-        .success-box {
-            background: #d1fae5;
-            border-left: 4px solid var(--success-color);
-            padding: 1.5em;
-            margin: 1em 0;
-            border-radius: 0.5em;
-        }
-
-        /* Color coding */
-        .male { color: var(--male-color); font-weight: 600; }
-        .female { color: var(--female-color); font-weight: 600; }
-
-        /* Formula styling */
-        .formula {
-            background: #f1f5f9;
-            padding: 1em;
-            border-radius: 0.5em;
-            font-family: 'Courier New', monospace;
-            font-size: 1.2em;
-            margin: 1em 0;
-        }
-
-        /* Two-column layout */
-        .two-columns {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2em;
-        }
-
-        /* Emphasis */
-        .big-emphasis {
-            font-size: 1.8em;
-            font-weight: 700;
-            color: #7c3aed;
-            margin: 0.5em 0;
-        }
-
-        /* List styling */
-        .reveal ul, .reveal ol {
-            margin: 1em 0;
-        }
-
-        .reveal li {
-            margin: 0.5em 0;
-        }
-
-        /* Small text */
-        .small-text {
-            font-size: 0.7em;
-            color: #64748b;
-        }
-
-        /* Image placeholders */
-        .image-placeholder {
-            background: #e2e8f0;
-            border: 2px dashed #94a3b8;
-            padding: 3em;
-            text-align: center;
-            border-radius: 0.5em;
-            color: #64748b;
-        }
-
-        /* Quote styling */
-        blockquote {
-            background: #f8fafc;
-            border-left: 4px solid #7c3aed;
-            padding: 1em 1.5em;
-            font-style: italic;
-            margin: 1em 0;
-        }
-
-        /* Table styling */
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 1em 0;
-        }
-
-        th, td {
-            border: 1px solid #e2e8f0;
-            padding: 0.75em;
-            text-align: left;
-        }
-
-        th {
-            background: #f1f5f9;
-            font-weight: 600;
-        }
-
-        /* Demo slide */
-        .demo-slide {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white !important;
-        }
-
-        .demo-slide h2 {
-            color: white !important;
-        }
-
-        /* Centered content */
-        .center-content {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100%;
-        }
-    </style>
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--shiwani);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
-
 <body>
-    <div class="reveal">
-        <div class="slides">
-
-            <!-- ============================================ -->
-            <!-- OPENING: THE IMPOSSIBLE PATIENT (Slides 1-4) -->
-            <!-- ============================================ -->
-
-            <!-- Slide 1: Title -->
-            <section class="title-slide">
-                <h1>Indexing for the Precision Medicine Era</h1>
-                <h2>Why Our Normalization Methods Need to Evolve</h2>
-                <p style="margin-top: 2em;">Dan Dyar, MA, ACS, RDCS, FASE</p>
-                <p>University of California, San Diego</p>
-                <p class="small-text" style="margin-top: 2em;">The Adult Congenital Heart Program<br>
-                Division of Cardiovascular Medicine</p>
-                
-                <aside class="notes">
-                    Welcome everyone. Today I want to challenge something fundamental about how we practice echocardiography. 
-                    This isn't about a new technique or a new device - it's about the mathematical foundations we use every single day.
-                    By the end of this presentation, I hope to convince you that our current normalization methods are deeply flawed,
-                    and that we have the tools to do better.
-                </aside>
-            </section>
-
-            <!-- Slide 2: A Simple Question -->
-            <section>
-                <h2>A Simple Question</h2>
-                <div class="info-box">
-                    <p><strong>Patient Profile:</strong></p>
-                    <ul>
-                        <li>Female patient</li>
-                        <li>BSA: 1.8 m²</li>
-                        <li>Following Strom 2024 reference values...</li>
-                    </ul>
-                </div>
-                
-                <div style="margin-top: 2em;">
-                    <p><strong>Indexed Values (mean):</strong></p>
-                    <ul>
-                        <li>IVS/BSA = <span class="female">0.60 cm/m²</span></li>
-                        <li>LVPW/BSA = <span class="female">0.51 cm/m²</span></li>
-                        <li>LVIDd/BSA = <span class="female">2.40 cm/m²</span></li>
-                    </ul>
-                </div>
-
-                <p style="margin-top: 2em; font-size: 1.3em; color: #7c3aed;">
-                    All within normal range. What would you expect for LV mass?
-                </p>
-
-                <aside class="notes">
-                    Let's start with a patient. Female, BSA 1.8 m². We're using the Strom 2024 reference values.
-                    IVS indexed to BSA is 0.60. LVPW is 0.51. LVIDd is 2.40.
-                    All of these are within the normal reference range.
-                    Before we go further, I want you to think: based on these measurements, what would you expect for LV mass?
-                </aside>
-            </section>
-
-            <!-- Slide 3: Calculate the LV Mass -->
-            <section>
-                <h2>Calculate the LV Mass</h2>
-                
-                <div class="info-box">
-                    <p><strong>ASE LV Mass Formula:</strong></p>
-                    <div class="formula">
-                        LV Mass = 0.8 × [1.04 × (IVS + LVIDd + LVPW)³ - (LVIDd)³] + 0.6
-                    </div>
-                </div>
-
-                <div style="margin-top: 2em;">
-                    <p style="font-size: 1.2em;">Converting our indexed values back to absolute measurements:</p>
-                    <ul>
-                        <li>IVS = 0.60 × 1.8 = <strong>1.08 cm</strong></li>
-                        <li>LVPW = 0.51 × 1.8 = <strong>0.92 cm</strong></li>
-                        <li>LVIDd = 2.40 × 1.8 = <strong>4.32 cm</strong></li>
-                    </ul>
-                </div>
-
-                <div class="warning-box" style="margin-top: 2em;">
-                    <p style="font-size: 1.2em;"><strong>Take a moment to think...</strong></p>
-                    <p>Larger walls + larger diameter = ?</p>
-                </div>
-
-                <aside class="notes">
-                    Here's the ASE formula we all use. It's pure geometry - we cube the sum of these measurements.
-                    When we convert our indexed values back to absolute measurements for a BSA of 1.8,
-                    we get IVS of 1.08 cm, LVPW of 0.92 cm, and LVIDd of 4.32 cm.
-                    Larger walls plus larger diameter - geometrically, what should happen to mass?
-                    Let the audience think about this before advancing.
-                </p>
-            </section>
-
-            <!-- Slide 4: The Contradiction -->
-            <section>
-                <h2>The Contradiction</h2>
-                
-                <div class="danger-box">
-                    <h3 style="color: #dc2626;">⚠️ The Reveal</h3>
-                    <p style="font-size: 1.3em;">According to Strom's linear measurements:</p>
-                    <p class="big-emphasis female">Females should have LARGER LV mass</p>
-                    
-                    <div style="margin-top: 1.5em; padding-top: 1.5em; border-top: 2px solid #fca5a5;">
-                        <p style="font-size: 1.3em;">But Strom's published LV mass reference says:</p>
-                        <p class="big-emphasis male">Males have LARGER LV mass</p>
-                    </div>
-                </div>
-
-                <div style="text-align: center; margin-top: 2em;">
-                    <p style="font-size: 1.5em; color: #7c3aed; font-weight: 700;">
-                        Same data. Same patient. Opposite conclusions.
-                    </p>
-                </div>
-
-                <div class="info-box" style="margin-top: 1.5em;">
-                    <p><strong>This isn't:</strong></p>
-                    <ul>
-                        <li>❌ A data problem</li>
-                        <li>❌ A measurement error</li>
-                        <li>✅ A <strong>mathematical problem</strong> with how we normalize measurements</li>
-                    </ul>
-                </div>
-
-                <aside class="notes">
-                    Here's the reveal. The same Strom reference data says that females should have SMALLER indexed LV mass than males.
-                    Same data. Same patient. Opposite conclusions.
-                    The linear measurements tell us females should have larger mass.
-                    The published mass values tell us males should have larger mass.
-                    This is mathematically impossible.
-                    And this isn't a data problem or a measurement error.
-                    This is a fundamental mathematical problem with ratiometric scaling.
-                    To understand why this happens, we need to look at what ratiometric scaling actually assumes.
-                </aside>
-            </section>
-
-            <!-- ======================================================= -->
-            <!-- ACT I: WHAT RATIOMETRIC SCALING ASSUMES (Slides 5-8) -->
-            <!-- ======================================================= -->
-
-            <!-- Slide 5: The Simple Ratio -->
-            <section>
-                <h2>The Simple Ratio</h2>
-                
-                <div class="formula">
-                    Indexed Value = Measurement / BSA
-                </div>
-
-                <div style="margin-top: 2em;">
-                    <p style="font-size: 1.2em;">This is what we do every day:</p>
-                    <ul>
-                        <li>Seems logical, right?</li>
-                        <li>Normalize for body size</li>
-                        <li>Make patients comparable</li>
-                    </ul>
-                </div>
-
-                <div class="warning-box" style="margin-top: 2em;">
-                    <p style="font-size: 1.3em; font-weight: 600;">But let's look deeper...</p>
-                </div>
-
-                <aside class="notes">
-                    This is the simple ratio we use constantly. Measurement divided by BSA.
-                    It seems logical - we're normalizing for body size.
-                    But there's a hidden assumption here that we need to unpack.
-                </aside>
-            </section>
-
-            <!-- Slide 6: The Hidden Assumption -->
-            <section>
-                <h2>The Hidden Assumption</h2>
-                
-                <div class="info-box">
-                    <p><strong>Rearranging the formula:</strong></p>
-                    <div class="formula">
-                        Measurement = Indexed Value × BSA
-                    </div>
-                </div>
-
-                <div class="image-placeholder" style="margin-top: 2em;">
-                    [Graph: Line through origin]<br>
-                    X-axis: BSA (m²)<br>
-                    Y-axis: Measurement<br>
-                    Slope = Indexed Value
-                </div>
-
-                <div class="danger-box" style="margin-top: 1.5em;">
-                    <p><strong>This is a line through the origin</strong></p>
-                    <ul>
-                        <li>Assumes a linear relationship</li>
-                        <li>Assumes if BSA = 0, measurement = 0</li>
-                        <li>Assumes the same slope works for everyone</li>
-                    </ul>
-                </div>
-
-                <aside class="notes">
-                    When we rearrange this formula, we see what we're really saying:
-                    Measurement equals indexed value times BSA.
-                    This is a line through the origin.
-                    It assumes a perfectly linear relationship.
-                    It assumes that if BSA equals zero, the measurement equals zero.
-                    And it assumes the same slope - the same indexed value - works for everyone.
-                    This can only be accurate at ONE point - usually calibrated to the population average.
-                    Everyone else gets systematically biased.
-                </aside>
-            </section>
-
-            <!-- Slide 7: But Biology Isn't Linear -->
-            <section>
-                <h2>But Biology Isn't Linear</h2>
-
-                <div class="image-placeholder">
-                    [Scatter plot: IVS vs BSA]<br>
-                    Shows actual curved relationship<br>
-                    Overlay: Forced linear fit through origin<br>
-                    Regions labeled "Overestimated" and "Underestimated"
-                </div>
-
-                <div class="warning-box" style="margin-top: 1.5em;">
-                    <p style="font-size: 1.2em;"><strong>Key insights:</strong></p>
-                    <ul>
-                        <li>The heart doesn't go to zero at BSA = 0</li>
-                        <li>Newborns have hearts!</li>
-                        <li>The relationship is a <strong>curve</strong>, not a line</li>
-                        <li>When we force a line onto a curve, we create <strong>bias</strong></li>
-                    </ul>
-                </div>
-
-                <aside class="notes">
-                    Here's the problem: biology isn't linear.
-                    The heart doesn't go to zero when BSA equals zero - newborns have hearts!
-                    The real relationship is a curve, not a line.
-                    When we force a straight line through the origin onto a curved relationship,
-                    we systematically overestimate some patients and underestimate others.
-                    And this bias is not random - it's systematic and predictable.
-                </aside>
-            </section>
-
-            <!-- Slide 8: Who Gets Hurt? -->
-            <section>
-                <h2>Who Gets Hurt?</h2>
-
-                <div class="two-columns">
-                    <div>
-                        <div class="danger-box">
-                            <h4>Small patients (low BSA)</h4>
-                            <ul>
-                                <li>Measurements appear falsely <strong>elevated</strong></li>
-                                <li>May be labeled abnormal when normal</li>
-                            </ul>
-                        </div>
-
-                        <div class="danger-box">
-                            <h4>Large patients (high BSA)</h4>
-                            <ul>
-                                <li>Measurements appear falsely <strong>reduced</strong></li>
-                                <li>May miss true abnormalities</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="danger-box">
-                            <h4>Patients far from average BMI</h4>
-                            <ul>
-                                <li>Athletes</li>
-                                <li>Obesity</li>
-                                <li>Eating disorders</li>
-                                <li>Elderly with sarcopenia</li>
-                                <li>Anyone with unusual body composition</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="image-placeholder" style="margin-top: 1.5em;">
-                    [Bell curve showing population distribution]<br>
-                    Center: "Average" population - acceptable bias<br>
-                    Tails: "These patients get the worst bias"
-                </div>
-
-                <aside class="notes">
-                    So who gets hurt by this?
-                    Small patients with low BSA - their measurements appear falsely elevated. They might be labeled abnormal when they're actually normal.
-                    Large patients with high BSA - the opposite. Measurements appear falsely reduced. We might miss true abnormalities.
-                    And patients far from average BMI - athletes, obesity, eating disorders, sarcopenia - anyone with unusual body composition.
-                    These are often the patients who need the most careful assessment.
-                    And they're the ones getting the worst bias from our normalization methods.
-                </aside>
-            </section>
-
-            <!-- ============================================== -->
-            <!-- ACT II: LIVE DEMONSTRATION (Slide 9 + Demo) -->
-            <!-- ============================================== -->
-
-            <!-- Slide 9: Transition to Demo -->
-            <section class="demo-slide">
-                <div class="center-content">
-                    <h2>Let Me Show You</h2>
-                    
-                    <p style="font-size: 1.3em; margin-top: 1.5em;">
-                        I've built an interactive laboratory where you can see these mathematical impossibilities in real-time
-                    </p>
-
-                    <div style="margin-top: 2em; background: white; color: #1e293b; padding: 2em; border-radius: 0.5em;">
-                        <p style="font-size: 1.2em; font-weight: 600;">Try it yourself:</p>
-                        <p style="font-size: 1.5em; color: #7c3aed; margin-top: 0.5em;">
-                            <strong>parameterz.github.io/cardiac-scaling</strong>
-                        </p>
-                        <p class="small-text" style="margin-top: 1em;">
-                            Uses actual Strom 2024 reference data
-                        </p>
-                    </div>
-
-                    <p style="margin-top: 2em; font-size: 0.9em; opacity: 0.9;">
-                        [Switching to live demonstration...]
-                    </p>
-                </div>
-
-                <aside class="notes">
-                    Rather than just tell you about these contradictions, let me show you.
-                    I've built an interactive laboratory where you can see these mathematical impossibilities in real time.
-                    It uses the actual Strom 2024 reference data.
-                    You can try it yourself at parameterz.github.io/cardiac-scaling.
-                    Let me switch over and walk you through it.
-                    
-                    [DEMO SCRIPT BEGINS HERE - Follow presentation_roadmap.md sections 2.1-2.7]
-                    
-                    - Orient to interface
-                    - Show linear components (wall thickness, diameter)
-                    - Show calculated mass (from geometry)
-                    - Show published mass (from reference)
-                    - Show the contradiction overlay
-                    - Try different scaling methods
-                    - Demonstrate dimensional methods
-                    - Adjust BMI slider to show bias
-                    - Show calculation transparency
-                    
-                    [RETURN TO SLIDES]
-                </aside>
-            </section>
-
-            <!-- ================================================== -->
-            <!-- ACT III: THIS ISN'T JUST STROM DATA (Slides 10-12) -->
-            <!-- ================================================== -->
-
-            <!-- Slide 10: Tricuspid Valve Contradictions -->
-            <section>
-                <h2>This Isn't Just Strom Data</h2>
-                <h3>Tricuspid Valve Contradictions</h3>
-                
-                <div class="info-box">
-                    <p><strong>Reference:</strong> Addetia et al., JACC Img 2019</p>
-                </div>
-
-                <div class="danger-box">
-                    <p style="font-size: 1.2em;"><strong>The Contradiction:</strong></p>
-                    <ul>
-                        <li><span class="female">Females:</span> larger tricuspid <strong>perimeter/BSA</strong></li>
-                        <li><span class="male">Males:</span> larger tricuspid <strong>area/BSA</strong></li>
-                    </ul>
-                </div>
-
-                <div class="warning-box" style="margin-top: 1.5em;">
-                    <h4>Why This Is Impossible:</h4>
-                    <p>Perimeter and area are mathematically related:</p>
-                    <div class="formula">
-                        Area ∝ Perimeter²
-                    </div>
-                    <p style="margin-top: 1em;">For a given shape, if perimeter is larger, area <strong>must</strong> be larger.</p>
-                    <p style="font-size: 1.2em; font-weight: 600; color: #dc2626; margin-top: 1em;">
-                        These cannot show opposite relationships.
-                    </p>
-                </div>
-
-                <aside class="notes">
-                    Now, this isn't just the Strom data. These contradictions appear across multiple studies.
-                    Look at the tricuspid valve data from Addetia 2019.
-                    Females have larger tricuspid perimeter when indexed by BSA.
-                    But males have larger tricuspid area when indexed by BSA.
-                    This is geometrically impossible.
-                    Perimeter and area are mathematically related. Area is proportional to perimeter squared.
-                    If perimeter is larger, area must be larger.
-                    These cannot show opposite relationships.
-                    This is the same scaling artifact we saw with LV mass.
-                </aside>
-            </section>
-
-            <!-- Slide 11: Stroke Volume Paradox -->
-            <section>
-                <h2>Stroke Volume Paradox</h2>
-                
-                <div class="info-box">
-                    <p><strong>Reference:</strong> Patel et al., JASE 2021</p>
-                </div>
-
-                <div class="danger-box">
-                    <p style="font-size: 1.2em;"><strong>The Contradiction:</strong></p>
-                    <ul>
-                        <li><span class="female">Females:</span> larger LVOT diameter/BSA</li>
-                        <li><span class="female">Females:</span> larger VTI/BSA</li>
-                        <li><strong>Yet...</strong></li>
-                        <li><span class="male">Females:</span> SMALLER stroke volume/BSA ❓</li>
-                    </ul>
-                </div>
-
-                <div class="warning-box" style="margin-top: 1.5em;">
-                    <h4>Why This Is Impossible:</h4>
-                    <div class="formula">
-                        SV = (π/4) × D² × VTI
-                    </div>
-                    <p style="margin-top: 1em;">If D is larger AND VTI is larger...</p>
-                    <p style="font-size: 1.3em; font-weight: 600; margin-top: 0.5em;">
-                        SV <strong>must</strong> be larger
-                    </p>
-                    <p style="font-size: 1.2em; font-weight: 600; color: #dc2626; margin-top: 1em;">
-                        The math doesn't work.
-                    </p>
-                </div>
-
-                <aside class="notes">
-                    Here's another example from the WASE stroke volume data.
-                    Females have larger LVOT diameter when indexed by BSA.
-                    Females have larger VTI when indexed by BSA.
-                    Yet females have SMALLER stroke volume when indexed by BSA.
-                    This is impossible.
-                    Stroke volume equals pi over 4 times diameter squared times VTI.
-                    If both diameter and VTI are larger, stroke volume must be larger.
-                    The math doesn't work.
-                    Same problem, different parameter, same root cause.
-                </aside>
-            </section>
-
-            <!-- Slide 12: Pattern Recognition -->
-            <section>
-                <h2>Pattern Recognition</h2>
-
-                <div class="two-columns">
-                    <div>
-                        <div class="info-box">
-                            <h4>These aren't random errors</h4>
-                            <ul>
-                                <li>Systematic</li>
-                                <li>Appear across studies</li>
-                                <li>Involve different parameters</li>
-                                <li>Different authors</li>
-                                <li>Different populations</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="warning-box">
-                            <h4>Common root cause</h4>
-                            <ul>
-                                <li><strong>Ratiometric scaling</strong></li>
-                                <li>Forcing nonlinear relationships into linear models</li>
-                                <li>Inappropriate normalization methods</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="danger-box" style="margin-top: 1.5em;">
-                    <h4 style="color: #dc2626;">Real Clinical Consequences</h4>
-                    <ul>
-                        <li>Affect decision-making</li>
-                        <li>Create sex-based biases</li>
-                        <li>Penalize patients with unusual body habitus</li>
-                        <li>Reduce diagnostic accuracy</li>
-                    </ul>
-                </div>
-
-                <aside class="notes">
-                    Let's recognize the pattern here.
-                    These aren't random errors or isolated mistakes.
-                    They're systematic. They appear across multiple studies, different parameters, different authors, different populations.
-                    They all stem from the same root cause: ratiometric scaling.
-                    Forcing nonlinear biological relationships into linear mathematical models.
-                    Using inappropriate normalization methods.
-                    And they have real clinical consequences.
-                    They affect our decision-making. They create sex-based biases.
-                    They penalize patients with unusual body habitus.
-                    They reduce diagnostic accuracy.
-                    So when does this actually matter clinically?
-                </aside>
-            </section>
-
-            <!-- ================================================ -->
-            <!-- ACT IV: CLINICAL IMPLICATIONS (Slides 13-16)  -->
-            <!-- ================================================ -->
-
-            <!-- Slide 13: When Does This Matter? -->
-            <section>
-                <h2>When Does This Matter?</h2>
-
-                <div style="font-size: 0.9em;">
-                    <div class="info-box">
-                        <h4>1. Determining Left Ventricular Hypertrophy</h4>
-                        <p>Cutoff values based on indexed mass → Different methods = different diagnoses → Affects risk stratification and treatment decisions</p>
-                    </div>
-
-                    <div class="info-box">
-                        <h4>2. Assessing Chamber Enlargement</h4>
-                        <p>"Dilated" vs "Normal" designation → Triggers different management pathways</p>
-                    </div>
-
-                    <div class="info-box">
-                        <h4>3. Pediatric/Congenital Z-scores</h4>
-                        <p>Critical for growth assessment → Surgical timing decisions → Long-term monitoring</p>
-                    </div>
-
-                    <div class="info-box">
-                        <h4>4. Serial Measurements Across Body Size Changes</h4>
-                        <p>Weight loss/gain, growth in children → Is the heart changing or is the indexing method creating artifact?</p>
-                    </div>
-
-                    <div class="info-box">
-                        <h4>5. Guideline-Based Decisions</h4>
-                        <p>Many guidelines use indexed values → Medication initiation → Intervention timing</p>
-                    </div>
-                </div>
-
-                <aside class="notes">
-                    So when does this matter clinically?
-                    When we're determining LVH - cutoff values are based on indexed mass. Different methods give different diagnoses.
-                    Assessing chamber enlargement - dilated versus normal triggers completely different management.
-                    Pediatric and congenital Z-scores - critical for surgical timing.
-                    Serial measurements when body size changes - is the heart changing or is it indexing artifact?
-                    And guideline-based decisions - medications, interventions, all based on indexed values.
-                    Let me show you some specific examples.
-                </aside>
-            </section>
-
-            <!-- Slide 14: Clinical Scenario 1 -->
-            <section>
-                <h2>Clinical Scenario 1</h2>
-                <h3>The Tall, Thin Patient</h3>
-
-                <div class="two-columns">
-                    <div>
-                        <div class="info-box">
-                            <h4>Patient Profile</h4>
-                            <ul>
-                                <li>30-year-old male</li>
-                                <li>Height: 195 cm (6'5")</li>
-                                <li>Weight: 75 kg (165 lbs)</li>
-                                <li>BMI: 19.7 (underweight)</li>
-                                <li>BSA: 2.05 m²</li>
-                            </ul>
-                        </div>
-
-                        <div class="info-box">
-                            <h4>Measurements</h4>
-                            <ul>
-                                <li>IVS: 1.2 cm</li>
-                                <li>LVIDd: 5.4 cm</li>
-                                <li>LVPW: 1.1 cm</li>
-                                <li>LV Mass: 185 g</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="warning-box">
-                            <h4>Using BSA Indexing</h4>
-                            <p>LV Mass/BSA = 185 / 2.05 = <strong>90 g/m²</strong></p>
-                            <p>Below male cutoff of 115 g/m²</p>
-                            <p style="font-size: 1.2em; font-weight: 600; color: #10b981;">
-                                ✓ "Normal"
-                            </p>
-                        </div>
-
-                        <div class="danger-box" style="margin-top: 1em;">
-                            <h4>But consider...</h4>
-                            <ul>
-                                <li>Very thin (BMI 19.7)</li>
-                                <li>Muscle mass likely low</li>
-                                <li>Is 185g really normal for this body composition?</li>
-                                <li>Using height^2.7: indexed value would be higher</li>
-                            </ul>
-                            <p style="margin-top: 1em; font-weight: 600;">
-                                Possible missed early cardiomyopathy?
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <aside class="notes">
-                    Here's a real scenario. Tall, thin 30-year-old male.
-                    6'5", 165 pounds. BMI 19.7 - underweight.
-                    BSA 2.05 - large BSA driven by his height.
-                    Echo shows IVS 1.2, diameter 5.4, posterior wall 1.1.
-                    Calculated mass 185 grams.
-                    Using BSA indexing, that's 90 grams per meter squared.
-                    Below the male cutoff of 115. We call it normal.
-                    But is it? He's very thin. Low muscle mass.
-                    Is 185 grams really normal for his body composition?
-                    Using a height-based method, the indexed value would be higher.
-                    Might appear abnormal. Might be early cardiomyopathy.
-                    Different indexing method, different diagnosis.
-                </aside>
-            </section>
-
-            <!-- Slide 15: Clinical Scenario 2 -->
-            <section>
-                <h2>Clinical Scenario 2</h2>
-                <h3>The Short, Overweight Patient</h3>
-
-                <div class="two-columns">
-                    <div>
-                        <div class="info-box">
-                            <h4>Patient Profile</h4>
-                            <ul>
-                                <li>55-year-old female</li>
-                                <li>Height: 152 cm (5'0")</li>
-                                <li>Weight: 80 kg (176 lbs)</li>
-                                <li>BMI: 34.6 (obese class I)</li>
-                                <li>BSA: 1.86 m²</li>
-                            </ul>
-                        </div>
-
-                        <div class="info-box">
-                            <h4>Measurements</h4>
-                            <ul>
-                                <li>IVS: 1.4 cm</li>
-                                <li>LVIDd: 5.0 cm</li>
-                                <li>LVPW: 1.3 cm</li>
-                                <li>LV Mass: 208 g</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="danger-box">
-                            <h4>Using BSA Indexing</h4>
-                            <p>LV Mass/BSA = 208 / 1.86 = <strong>112 g/m²</strong></p>
-                            <p>Above female cutoff of 95 g/m²</p>
-                            <p style="font-size: 1.2em; font-weight: 600; color: #dc2626;">
-                                ⚠️ "LVH Present"
-                            </p>
-                        </div>
-
-                        <div class="warning-box" style="margin-top: 1em;">
-                            <h4>But consider...</h4>
-                            <ul>
-                                <li>High BSA driven by adipose tissue</li>
-                                <li>Is BSA denominator appropriate?</li>
-                                <li>Height^2.7 indexing: even higher</li>
-                            </ul>
-                        </div>
-
-                        <div class="info-box" style="margin-top: 1em;">
-                            <h4>Clinical Impact</h4>
-                            <p>Might start medications • More aggressive risk modification • Psychological impact of "heart disease" diagnosis</p>
-                            <p style="margin-top: 0.5em; font-weight: 600;">Is this truly pathologic or an indexing artifact?</p>
-                        </div>
-                    </div>
-                </div>
-
-                <aside class="notes">
-                    Here's the opposite scenario. Short woman, 5 feet tall.
-                    176 pounds. BMI 34.6 - obese class I.
-                    BSA 1.86 - large BSA, but driven by adipose tissue, not lean body mass.
-                    Echo shows IVS 1.4, diameter 5.0, posterior wall 1.3.
-                    LV mass 208 grams.
-                    Using BSA indexing, that's 112 grams per meter squared.
-                    Above the female cutoff of 95. We diagnose LVH.
-                    But is that BSA denominator appropriate when it's mostly adipose tissue?
-                    Is this truly pathologic or is it indexing artifact?
-                    Clinical impact: we might start medications, more aggressive risk modification,
-                    psychological impact of being told you have heart disease.
-                    The indexing method matters.
-                </aside>
-            </section>
-
-            <!-- Slide 16: The Precision Medicine Paradox -->
-            <section>
-                <h2>The Precision Medicine Paradox</h2>
-
-                <div class="two-columns">
-                    <div>
-                        <div class="success-box">
-                            <h4>What We CAN Do</h4>
-                            <ul>
-                                <li>Sequence entire genomes in hours</li>
-                                <li>Use AI for personalized risk prediction</li>
-                                <li>Measure global longitudinal strain to 0.1%</li>
-                                <li>3D-print patient-specific models</li>
-                                <li>Identify genetic variants affecting drug metabolism</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="danger-box">
-                            <h4>What We DON'T Do</h4>
-                            <ul>
-                                <li>Normalize measurements appropriately for body size</li>
-                                <li>Account for body composition</li>
-                                <li>Use dimensionally sound scaling</li>
-                            </ul>
-                            <div style="text-align: center; margin-top: 2em;">
-                                <div class="formula">
-                                    Measurement / BSA
-                                </div>
-                                <p class="small-text" style="margin-top: 0.5em;">A simple ratio from the 1800s</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <blockquote style="margin-top: 2em; font-size: 1.3em; text-align: center;">
-                    Our tools have evolved.<br>
-                    Our scaling methods haven't.
-                </blockquote>
-
-                <aside class="notes">
-                    Here's the paradox we face in precision medicine.
-                    We can sequence entire genomes in hours.
-                    We use AI for personalized risk prediction.
-                    We measure strain to a tenth of a percent.
-                    We 3D-print patient-specific models.
-                    We identify genetic variants that affect drug metabolism.
-                    Yet for body size normalization, we use a simple ratio from the 1800s.
-                    We don't account for body composition.
-                    We don't use dimensionally sound scaling.
-                    Our tools have evolved. Our scaling methods haven't.
-                    But better approaches exist - and they're being validated right now.
-                </aside>
-            </section>
-
-            <!-- ================================================== -->
-            <!-- ACT V: BETTER APPROACHES EXIST (Slides 17-19)   -->
-            <!-- ================================================== -->
-
-            <!-- Slide 17: What Works? -->
-            <section>
-                <h2>Better Approaches Exist</h2>
-                <h3>What Works?</h3>
-
-                <div style="font-size: 0.85em;">
-                    <div class="success-box">
-                        <h4>1. Allometric Scaling (Dimensional Analysis)</h4>
-                        <div class="two-columns">
-                            <div>
-                                <p><strong>The Principle:</strong></p>
-                                <ul>
-                                    <li>Linear measurements ~ BSA^0.5</li>
-                                    <li>Areas ~ BSA^1.0</li>
-                                    <li>Volumes and mass ~ BSA^1.5</li>
-                                </ul>
-                                <p style="margin-top: 1em;"><strong>Why It Works:</strong></p>
-                                <ul>
-                                    <li>Respects geometric relationships</li>
-                                    <li>Based on physical dimensions</li>
-                                    <li>You saw it work in the lab (⭐ methods)</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <p><strong>Formula Examples:</strong></p>
-                                <div class="formula" style="font-size: 0.9em;">
-                                    Linear: Measurement / BSA^0.5<br>
-                                    Mass: Measurement / BSA^1.5
-                                </div>
-                                <p style="margin-top: 1em;"><strong>Evidence:</strong></p>
-                                <ul>
-                                    <li>Reduces contradictions</li>
-                                    <li>Better across body size range</li>
-                                    <li>Mathematically sound</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="success-box">
-                        <h4>2. Multivariable Prediction Models</h4>
-                        <div class="two-columns">
-                            <div>
-                                <p><strong>The Principle:</strong></p>
-                                <ul>
-                                    <li>Don't use ratios at all</li>
-                                    <li>Build regression models with multiple predictors</li>
-                                    <li>Adjust for age, sex, ethnicity, BSA simultaneously</li>
-                                </ul>
-                                <p style="margin-top: 1em;"><strong>Example:</strong></p>
-                                <p>Shiwani et al. 2024 (JACC)</p>
-                                <ul>
-                                    <li>Personalized LVH thresholds</li>
-                                    <li>Accounts for demographics</li>
-                                    <li>More accurate risk prediction</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <p><strong>Advantages:</strong></p>
-                                <ul>
-                                    <li>Captures complex relationships</li>
-                                    <li>No forced linearity</li>
-                                    <li>Can include relevant covariates</li>
-                                    <li>Individualized assessment</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="success-box">
-                        <h4>3. Properly Constructed Z-scores</h4>
-                        <div class="two-columns">
-                            <div>
-                                <p><strong>The Principle:</strong></p>
-                                <ul>
-                                    <li>Model the entire distribution</li>
-                                    <li>Account for multiple body size metrics</li>
-                                    <li>Allow nonlinear relationships</li>
-                                </ul>
-                                <p style="margin-top: 1em;"><strong>Example:</strong></p>
-                                <p>Lauzon-Schnittka et al. 2025</p>
-                                <ul>
-                                    <li>Pediatric echo Z-scores</li>
-                                    <li>Adjusts for BSA, BMI, and age</li>
-                                    <li>Appropriate statistical modeling</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <p><strong>Advantages:</strong></p>
-                                <ul>
-                                    <li>Individual-level assessment</li>
-                                    <li>Captures growth patterns</li>
-                                    <li>Accounts for variability</li>
-                                    <li>Already proven in pediatrics</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <aside class="notes">
-                    So what works?
-                    First, allometric scaling - dimensional analysis. Linear measurements scale with BSA to the 0.5 power.
-                    Mass scales with BSA to the 1.5 power. Respects geometric relationships. Based on physical dimensions.
-                    You saw it work in the lab - those were the star methods.
-                    Second, multivariable prediction models. Don't use ratios at all.
-                    Build regression models that adjust for age, sex, ethnicity, BSA simultaneously.
-                    Shiwani 2024 showed this works for personalized LVH thresholds.
-                    Third, properly constructed Z-scores. Model the entire distribution.
-                    Account for multiple body size metrics. Allow nonlinear relationships.
-                    Lauzon-Schnittka 2025 did this for pediatric echo. Already proven to work.
-                </aside>
-            </section>
-
-            <!-- Slide 18: We Don't Need New Data -->
-            <section>
-                <h2>We Don't Need New Data</h2>
-
-                <div class="success-box">
-                    <h3 style="color: #10b981;">The datasets we have are excellent</h3>
-                    <ul style="font-size: 1.1em;">
-                        <li><strong>MESA</strong> (Multi-Ethnic Study of Atherosclerosis)</li>
-                        <li><strong>WASE</strong> (World Alliance Societies of Echocardiography)</li>
-                        <li><strong>Framingham</strong></li>
-                        <li><strong>Many others</strong></li>
-                    </ul>
-                </div>
-
-                <div class="info-box" style="margin-top: 2em;">
-                    <h3>What We Need:</h3>
-                    <p style="font-size: 1.3em; margin-top: 1em;">
-                        <strong>Re-analysis</strong> with better methods
-                    </p>
-                    <ul style="font-size: 1.1em; margin-top: 1em;">
-                        <li>The raw measurements are already there</li>
-                        <li>We just need to normalize them correctly</li>
-                    </ul>
-                </div>
-
-                <div class="success-box" style="margin-top: 2em;">
-                    <h3 style="color: #10b981;">This Is Good News:</h3>
-                    <ul style="font-size: 1.1em;">
-                        <li>✓ No need to wait for new studies</li>
-                        <li>✓ Can start now</li>
-                        <li>✓ Cost-effective</li>
-                        <li>✓ Faster implementation</li>
-                    </ul>
-                </div>
-
-                <p style="text-align: center; margin-top: 2em; font-size: 1.2em; font-style: italic;">
-                    Same data + Better methods = New insights
-                </p>
-
-                <aside class="notes">
-                    Here's the good news: we don't need new data.
-                    The datasets we have - MESA, WASE, Framingham, many others - these are excellent datasets.
-                    What we need is re-analysis with better methods.
-                    The raw measurements are already there.
-                    We just need to normalize them correctly.
-                    This is actually good news.
-                    No need to wait for new studies. We can start now.
-                    It's cost-effective. Faster implementation.
-                    Same data, better methods, new insights.
-                </aside>
-            </section>
-
-            <!-- Slide 19: Proof of Concept -->
-            <section>
-                <h2>Proof of Concept</h2>
-
-                <div class="image-placeholder">
-                    [Comparison graph showing same patients]<br>
-                    Traditional BSA indexing vs Allometric scaling<br>
-                    Demonstrate reduction in contradiction/bias
-                </div>
-
-                <div class="two-columns" style="margin-top: 2em;">
-                    <div class="success-box">
-                        <h4>Successful Implementations</h4>
-                        <ul>
-                            <li>Pediatric cardiology already uses Z-scores</li>
-                            <li>Some centers using multivariable models</li>
-                            <li>Guidelines in other specialties moving away from ratios</li>
-                        </ul>
-                    </div>
-
-                    <div class="info-box">
-                        <h4>Your Lab Demo Showed</h4>
-                        <ul>
-                            <li>BSA vs BSA^0.5 methods</li>
-                            <li>BSA vs BSA^1.5 for mass</li>
-                            <li>Improvement in consistency</li>
-                            <li>Reduction in contradictions</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="success-box" style="margin-top: 2em; text-align: center;">
-                    <p style="font-size: 1.3em; font-weight: 600;">
-                        When we use appropriate methods...<br>
-                        Mathematical contradictions disappear<br>
-                        Clinical decisions improve
-                    </p>
-                </div>
-
-                <aside class="notes">
-                    The proof of concept is there.
-                    You saw it in the lab - when we switched to dimensional scaling,
-                    the contradictions disappeared or were greatly reduced.
-                    Pediatric cardiology has been doing this for years with Z-scores.
-                    Some adult centers are already using multivariable models.
-                    Guidelines in other specialties are moving away from simple ratios.
-                    When we use appropriate methods, mathematical contradictions disappear,
-                    and clinical decisions improve.
-                </aside>
-            </section>
-
-            <!-- ============================================= -->
-            <!-- CLOSING: A CALL TO ACTION (Slides 20-24)   -->
-            <!-- ============================================= -->
-
-            <!-- Slide 20: The Chamber Quantification Guidelines -->
-            <section>
-                <h2>The Chamber Quantification Guidelines</h2>
-
-                <div class="warning-box">
-                    <h3>The Opportunity</h3>
-                    <ul style="font-size: 1.1em;">
-                        <li>ASE/EACVI Chamber Quantification Guidelines</li>
-                        <li>Major revision in development</li>
-                        <li>Influential worldwide</li>
-                        <li>Used as standard of care</li>
-                    </ul>
-                </div>
-
-                <div class="success-box" style="margin-top: 2em;">
-                    <h3 style="color: #10b981;">What Should Change:</h3>
-                    
-                    <div style="font-size: 0.95em;">
-                        <p><strong>1. Move away from simple ratios</strong></p>
-                        <ul>
-                            <li>Acknowledge limitations</li>
-                            <li>Recommend alternatives</li>
-                        </ul>
-
-                        <p style="margin-top: 1em;"><strong>2. Embrace dimensional scaling</strong></p>
-                        <ul>
-                            <li>Allometric methods for appropriate parameters</li>
-                            <li>Provide updated reference values</li>
-                        </ul>
-
-                        <p style="margin-top: 1em;"><strong>3. Support multivariable approaches</strong></p>
-                        <ul>
-                            <li>When available</li>
-                            <li>Especially for complex decisions</li>
-                        </ul>
-
-                        <p style="margin-top: 1em;"><strong>4. Provide tools</strong></p>
-                        <ul>
-                            <li>Calculators</li>
-                            <li>Reference tables</li>
-                            <li>Implementation guidance</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <p style="text-align: center; margin-top: 1.5em; font-size: 1.2em; font-weight: 600; color: #7c3aed;">
-                    This is a pivotal moment to update decades-old practice<br>
-                    and align with precision medicine principles
-                </p>
-
-                <aside class="notes">
-                    The Chamber Quantification Guidelines are being revised.
-                    This is a major opportunity.
-                    These guidelines are influential worldwide. Used as standard of care.
-                    What should change?
-                    Move away from simple ratios. Acknowledge their limitations.
-                    Embrace dimensional scaling. Provide updated reference values.
-                    Support multivariable approaches when available.
-                    Provide tools - calculators, reference tables, implementation guidance.
-                    This is a pivotal moment to update decades-old practice
-                    and align with modern precision medicine principles.
-                </aside>
-            </section>
-
-            <!-- Slide 21: What You Can Do -->
-            <section>
-                <h2>What You Can Do</h2>
-
-                <div class="two-columns">
-                    <div>
-                        <div class="info-box">
-                            <h4>As Individual Practitioners</h4>
-                            <ol>
-                                <li><strong>Question contradictions</strong> when you see them
-                                    <ul>
-                                        <li>Trust your geometric intuition</li>
-                                        <li>Investigate inconsistencies</li>
-                                    </ul>
-                                </li>
-                                <li><strong>Explore the interactive lab</strong>
-                                    <ul>
-                                        <li>parameterz.github.io/cardiac-scaling</li>
-                                        <li>Try different patients</li>
-                                        <li>Share with colleagues</li>
-                                    </ul>
-                                </li>
-                                <li><strong>Use dimensional approaches</strong>
-                                    <ul>
-                                        <li>When available in your system</li>
-                                        <li>Provide both traditional and dimensional values</li>
-                                        <li>Educate ordering physicians</li>
-                                    </ul>
-                                </li>
-                                <li><strong>Advocate for better normalization</strong>
-                                    <ul>
-                                        <li>In your lab protocols</li>
-                                        <li>In guideline development</li>
-                                        <li>In education/training programs</li>
-                                    </ul>
-                                </li>
-                            </ol>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="success-box">
-                            <h4>As a Community</h4>
-                            <ul>
-                                <li>Support research on better scaling methods</li>
-                                <li>Demand transparency in calculations</li>
-                                <li>Push for guideline updates</li>
-                                <li>Educate the next generation</li>
-                                <li>Share knowledge and tools</li>
-                            </ul>
-                        </div>
-
-                        <div class="warning-box" style="margin-top: 2em;">
-                            <h4>Start Small</h4>
-                            <p>You don't have to change everything overnight.</p>
-                            <ul>
-                                <li>Start conversations in your department</li>
-                                <li>Try the lab with different patient scenarios</li>
-                                <li>Document both methods when possible</li>
-                                <li>Build momentum for change</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <aside class="notes">
-                    So what can you do?
-                    As individual practitioners:
-                    Question contradictions when you see them. Trust your geometric intuition.
-                    Explore the interactive lab. Try different patients. Share with colleagues.
-                    Use dimensional approaches when available. Provide both traditional and new values.
-                    Advocate for better normalization in your protocols, in guidelines, in education.
-                    As a community:
-                    Support research on better scaling methods.
-                    Demand transparency in calculations.
-                    Push for guideline updates.
-                    You don't have to change everything overnight.
-                    Start conversations. Try the lab. Document both methods.
-                    Build momentum for change.
-                </aside>
-            </section>
-
-            <!-- Slide 22: Key Takeaway -->
-            <section>
-                <div class="center-content">
-                    <blockquote style="font-size: 1.5em; padding: 1.5em; margin: 0;">
-                        Ratiometric scaling is deeply flawed, yet pervasive in echo,<br>
-                        leading us to potentially incorrect diagnoses and treatments.
-                        <br><br>
-                        In the precision medicine era,<br>
-                        we can—and must—do better.
-                    </blockquote>
-
-                    <div style="margin-top: 3em;">
-                        <p style="font-size: 1.2em;">The tools exist.</p>
-                        <p style="font-size: 1.2em;">The data exist.</p>
-                        <p style="font-size: 1.2em;">The knowledge exists.</p>
-                        <p style="font-size: 1.5em; font-weight: 700; color: #7c3aed; margin-top: 1em;">
-                            What we need is action.
-                        </p>
-                    </div>
-                </div>
-
-                <aside class="notes">
-                    Let me leave you with this:
-                    Ratiometric scaling is deeply flawed, yet pervasive in echocardiography,
-                    leading us to potentially incorrect diagnoses and treatments.
-                    In the precision medicine era, we can—and must—do better.
-                    The tools exist. The data exist. The knowledge exists.
-                    What we need is action.
-                </aside>
-            </section>
-
-            <!-- Slide 23: Resources -->
-            <section>
-                <h2>Resources</h2>
-
-                <div class="two-columns">
-                    <div>
-                        <div class="success-box">
-                            <h3>Interactive Laboratory</h3>
-                            <p style="font-size: 1.3em; font-weight: 600; color: #7c3aed; margin: 1em 0;">
-                                parameterz.github.io/cardiac-scaling
-                            </p>
-                            <ul>
-                                <li>Explore at your own pace</li>
-                                <li>All calculations transparent</li>
-                                <li>Based on published data</li>
-                                <li>Share with colleagues</li>
-                            </ul>
-                            <div class="image-placeholder" style="margin-top: 1em;">
-                                <img src="qrcode.png" alt="QR Code for Interactive Laboratory" style="width: 150px; height: 150px;"><br/>
-                                Scan to access the lab
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="info-box">
-                            <h3>Key References</h3>
-                            <ol style="font-size: 0.8em;">
-                                <li>Strom JB, et al. Reference Values for Indexed Echocardiographic Chamber Sizes in Older Adults: The Multi-Ethnic Study of Atherosclerosis. <em>J Am Heart Assoc.</em> 2024;13:e034029.</li>
-                                <li>Addetia K, et al. 3-Dimensional Echocardiographic Analysis of the Tricuspid Annulus. <em>J Am Coll Cardiol Img.</em> 2019;12(3):401-412.</li>
-                                <li>Patel HN, et al. Normal Values of Cardiac Output and Stroke Volume According to Measurement Technique, Age, Sex, and Ethnicity: Results of the World Alliance of Societies of Echocardiography. <em>J Am Soc Echocardiogr.</em> 2021;34(10):1077-1085.</li>
-                                <li>Shiwani H, et al. Demographic-Based Personalized Left Ventricular Hypertrophy Thresholds. <em>J Am Coll Cardiol.</em> 2025;85(7):685-695.</li>
-                                <li>Lauzon-Schnittka J, et al. Z-Scores for Pediatric Echocardiography Dimensions. <em>Circ Cardiovasc Imaging.</em> 2025.</li>
-                            </ol>
-                        </div>
-                    </div>
-                </div>
-
-                <aside class="notes">
-                    Here are your resources.
-                    The interactive laboratory at parameterz.github.io/cardiac-scaling.
-                    Explore at your own pace. All calculations are transparent.
-                    Key references - Strom, Addetia, Patel, Shiwani, Lauzon-Schnittka.
-                    And my contact information if you want to discuss further.
-                </aside>
-            </section>
-
-            <!-- Slide 24: Thank You -->
-            <section class="title-slide">
-                <div class="center-content">
-                    <h1>Thank You</h1>
-                    <p style="font-size: 1.5em; margin-top: 2em;">Questions?</p>
-                    
-                    <div style="margin-top: 3em; font-size: 1.1em;">
-                        <p>Dan Dyar, MA, ACS, RDCS, FASE</p>
-                        <p>University of California, San Diego</p>
-                        <p style="margin-top: 1em;">dan@parameterz.com</p>
-                    </div>
-
-                    <p style="margin-top: 3em; font-size: 1.2em; color: #fbbf24;">
-                        <a style="color: #ffffff;" href="https://parameterz.github.io/cardiac-scaling" target="_blank">https://parameterz.github.io/cardiac-scaling</a>
-                    </p>
-                </div>
-
-                <aside class="notes">
-                    Thank you for your attention.
-                    I'm happy to take questions.
-                    And I hope you'll explore the interactive lab and join the conversation
-                    about improving how we normalize cardiac measurements.
-                    
-                    [Prepare for anticipated questions from the roadmap appendix]
-                </aside>
-            </section>
-
+  <div id="root"><div class="loading"><div class="spinner"></div>Loading PHN data…</div></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo, useCallback } = React;
+const Recharts = window.Recharts;
+const {
+  ScatterChart, Scatter, LineChart, Line,
+  ComposedChart, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ReferenceLine, ResponsiveContainer
+} = Recharts;
+
+// ── Color palette ────────────────────────────────────────────────────────────
+const C = {
+  male:    "#58a6ff",
+  female:  "#ff7b72",
+  mesa:    "#ffa657",
+  shiwani: "#3fb950",
+  hcm:     "#bc8cff",
+  muted:   "#7d8590",
+  border:  "#30363d",
+  surface: "#161b22",
+  text:    "#e6edf3",
+};
+
+// ── Shiwani GAMM reference data (age=55, BMI=24) ────────────────────────────
+const SHIWANI = [
+  { bsa:1.07, mUln:11.9, fUln:10.5, mMean:9.0,  fMean:7.7  },
+  { bsa:1.14, mUln:11.9, fUln:10.5, mMean:9.0,  fMean:7.7  },
+  { bsa:1.21, mUln:11.9, fUln:10.5, mMean:9.0,  fMean:7.7  },
+  { bsa:1.28, mUln:12.1, fUln:10.8, mMean:9.3,  fMean:7.9  },
+  { bsa:1.35, mUln:12.3, fUln:11.0, mMean:9.5,  fMean:8.2  },
+  { bsa:1.43, mUln:12.6, fUln:11.3, mMean:9.8,  fMean:8.4  },
+  { bsa:1.50, mUln:12.8, fUln:11.5, mMean:10.0, fMean:8.7  },
+  { bsa:1.58, mUln:13.0, fUln:11.7, mMean:10.2, fMean:8.9  },
+  { bsa:1.65, mUln:13.2, fUln:11.9, mMean:10.4, fMean:9.1  },
+  { bsa:1.72, mUln:13.4, fUln:12.0, mMean:10.6, fMean:9.2  },
+  { bsa:1.81, mUln:13.6, fUln:12.3, mMean:10.8, fMean:9.5  },
+  { bsa:1.89, mUln:13.9, fUln:12.6, mMean:11.1, fMean:9.8  },
+  { bsa:1.94, mUln:14.1, fUln:12.8, mMean:11.3, fMean:10.0 },
+  { bsa:1.97, mUln:14.2, fUln:12.9, mMean:11.4, fMean:10.1 },
+  { bsa:2.06, mUln:14.6, fUln:13.2, mMean:11.7, fMean:10.4 },
+  { bsa:2.14, mUln:15.0, fUln:13.7, mMean:12.2, fMean:10.8 },
+  { bsa:2.22, mUln:15.3, fUln:14.0, mMean:12.4, fMean:11.1 },
+  { bsa:2.31, mUln:15.5, fUln:14.2, mMean:12.7, fMean:11.4 },
+  { bsa:2.40, mUln:15.7, fUln:14.4, mMean:12.9, fMean:11.6 },
+  { bsa:2.49, mUln:15.9, fUln:14.6, mMean:13.1, fMean:11.8 },
+  { bsa:2.57, mUln:16.0, fUln:14.7, mMean:13.1, fMean:11.8 },
+  { bsa:2.66, mUln:16.0, fUln:14.7, mMean:13.1, fMean:11.8 },
+];
+
+// ── MESA ratiometric reference lines ─────────────────────────────────────────
+// Strom IVS/BSA: Male mean+2SD = 8.3 mm/m², Female = 8.6 mm/m²
+// (Female > Male — the contradiction!)
+function mesaLine(coeff, nPoints = 60) {
+  return Array.from({ length: nPoints }, (_, i) => {
+    const bsa = 0.3 + (i / (nPoints - 1)) * 2.4;
+    return { bsa: +bsa.toFixed(3), ivs: +(coeff * bsa).toFixed(2) };
+  });
+}
+const MESA_MALE_LINE   = mesaLine(8.3);
+const MESA_FEMALE_LINE = mesaLine(8.6);
+
+// ── Toggle button component ───────────────────────────────────────────────────
+function ToggleBtn({ label, on, onClick, colorKey, lineStyle = "dot" }) {
+  const colors = {
+    male:    C.male,    female: C.female,
+    mesa:    C.mesa,    shiwani: C.shiwani,  hcm: C.hcm,
+  };
+  const col = colors[colorKey] || C.muted;
+
+  const baseStyle = {
+    display: "inline-flex", alignItems: "center", gap: 7,
+    padding: "5px 13px", borderRadius: 20,
+    border: `1.5px solid ${on ? col : C.border}`,
+    cursor: "pointer",
+    fontFamily: "'DM Sans', sans-serif",
+    fontSize: 12, fontWeight: 500,
+    background: on ? `${col}20` : "transparent",
+    color: on ? col : C.muted,
+    transition: "all 0.15s ease",
+  };
+
+  const Swatch = () => {
+    if (lineStyle === "dot") {
+      return <span style={{ width: 8, height: 8, borderRadius: "50%", background: col, flexShrink: 0 }} />;
+    }
+    if (lineStyle === "solid") {
+      return <span style={{ width: 14, height: 2.5, background: col, borderRadius: 1, flexShrink: 0 }} />;
+    }
+    if (lineStyle === "dashed") {
+      return (
+        <span style={{ width: 16, flexShrink: 0, display: "inline-flex", gap: 2 }}>
+          {[0,1,2].map(i => <span key={i} style={{ flex: 1, height: 2, background: col, borderRadius: 1 }} />)}
+        </span>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <button style={baseStyle} onClick={onClick}>
+      <Swatch />
+      {label}
+    </button>
+  );
+}
+
+// ── Custom tooltip ────────────────────────────────────────────────────────────
+function CustomTooltip({ active, payload }) {
+  if (!active || !payload || payload.length === 0) return null;
+  return (
+    <div style={{
+      background: C.surface, border: `1px solid ${C.border}`,
+      borderRadius: 8, padding: "10px 14px",
+      fontFamily: "'DM Mono', monospace", fontSize: 12,
+      boxShadow: "0 4px 16px rgba(0,0,0,0.4)"
+    }}>
+      {payload.map((p, i) => (
+        <div key={i} style={{ color: p.color || p.stroke || C.text, padding: "1px 0" }}>
+          {p.name}: <strong>{typeof p.value === "number" ? p.value.toFixed(2) : p.value}</strong>
+          {p.name && p.name.includes("BSA") ? " m²" : " mm"}
         </div>
+      ))}
     </div>
+  );
+}
 
-    <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.0.4/dist/reveal.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.0.4/plugin/notes/notes.js"></script>
-    <script>
-        Reveal.initialize({
-            hash: true,
-            controls: true,
-            progress: true,
-            center: true,
-            transition: 'slide',
-            transitionSpeed: 'default',
-            
-            // Enable speaker notes
-            plugins: [ RevealNotes ],
-            
-            
-            // Display settings
-            width: 1920,
-            height: 1280,
-            margin: 0.04,
-            
-            // Auto-slide disabled (manual control)
-            autoSlide: 0
-        });
+// ── Main App ─────────────────────────────────────────────────────────────────
+function App({ data }) {
+  const [show, setShow] = useState({
+    male:         true,
+    female:       true,
+    mesaMale:     true,
+    mesaFemale:   true,
+    shiwaniUln:   true,
+    shiwaniMean:  false,
+    hcm:          true,
+  });
 
-        // Add custom keyboard shortcut for quick demo navigation
-        Reveal.addKeyBinding({
-            keyCode: 68, // 'd' key
-            key: 'D',
-            description: 'Jump to demo slide'
-        }, function() {
-            // Jump to slide 9 (demo transition)
-            Reveal.slide(8);
-        });
-    </script>
+  const toggle = key => setShow(s => ({ ...s, [key]: !s[key] }));
+
+  // Downsample scatter for performance (max 800 per sex)
+  const males = useMemo(() => {
+    if (data.males.length <= 800) return data.males;
+    const step = Math.ceil(data.males.length / 800);
+    return data.males.filter((_, i) => i % step === 0);
+  }, [data.males]);
+
+  const females = useMemo(() => {
+    if (data.females.length <= 800) return data.females;
+    const step = Math.ceil(data.females.length / 800);
+    return data.females.filter((_, i) => i % step === 0);
+  }, [data.females]);
+
+  const meta = data.meta || {};
+
+  return (
+    <div>
+      {/* ── Header ── */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{
+          fontFamily: "'DM Mono', monospace", fontSize: 10, fontWeight: 500,
+          letterSpacing: "1.2px", textTransform: "uppercase",
+          color: C.shiwani, marginBottom: 8
+        }}>
+          Indexing for the Precision Medicine Era
+        </div>
+        <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.4px", lineHeight: 1.3 }}>
+          IVS Thickness — PHN Synthetic Data vs Reference Standards
+        </h1>
+        <p style={{
+          fontSize: 12, color: C.muted, marginTop: 6,
+          fontFamily: "'DM Mono', monospace", lineHeight: 1.7
+        }}>
+          N={meta.n_male + meta.n_female} synthetic subjects (♂ {meta.n_male} · ♀ {meta.n_female}) ·
+          real PHN BSA values · IVS sampled via Z ~ N(0,1) · α={meta.alpha} · {meta.source}
+        </p>
+      </div>
+
+      {/* ── Controls ── */}
+      <div style={{
+        background: C.surface, border: `1px solid ${C.border}`,
+        borderRadius: 12, padding: "18px 22px", marginBottom: 14,
+        display: "flex", flexWrap: "wrap", gap: 24, alignItems: "flex-start"
+      }}>
+        {/* PHN Scatter */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: 9.5, fontWeight: 600, textTransform: "uppercase",
+            letterSpacing: "1px", color: C.muted, fontFamily: "'DM Mono', monospace" }}>
+            PHN Scatter
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <ToggleBtn label="Male"   on={show.male}   onClick={() => toggle("male")}   colorKey="male"   lineStyle="dot" />
+            <ToggleBtn label="Female" on={show.female} onClick={() => toggle("female")} colorKey="female" lineStyle="dot" />
+          </div>
+        </div>
+
+        {/* MESA */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: 9.5, fontWeight: 600, textTransform: "uppercase",
+            letterSpacing: "1px", color: C.muted, fontFamily: "'DM Mono', monospace" }}>
+            MESA Ratiometric ULN
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <ToggleBtn label="♂ ULN (8.3×BSA)" on={show.mesaMale}   onClick={() => toggle("mesaMale")}   colorKey="mesa" lineStyle="dashed" />
+            <ToggleBtn label="♀ ULN (8.6×BSA)" on={show.mesaFemale} onClick={() => toggle("mesaFemale")} colorKey="mesa" lineStyle="dashed" />
+          </div>
+        </div>
+
+        {/* Shiwani */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: 9.5, fontWeight: 600, textTransform: "uppercase",
+            letterSpacing: "1px", color: C.muted, fontFamily: "'DM Mono', monospace" }}>
+            Shiwani GAMM · age 55 · BMI 24
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <ToggleBtn label="♂ ULN" on={show.shiwaniUln}  onClick={() => toggle("shiwaniUln")}  colorKey="shiwani" lineStyle="solid" />
+            <ToggleBtn label="♀ ULN" on={show.shiwaniUln}  onClick={() => toggle("shiwaniUln")}  colorKey="shiwani" lineStyle="solid" />
+            <ToggleBtn label="± Mean lines" on={show.shiwaniMean} onClick={() => toggle("shiwaniMean")} colorKey="shiwani" lineStyle="dashed" />
+          </div>
+        </div>
+
+        {/* HCM */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: 9.5, fontWeight: 600, textTransform: "uppercase",
+            letterSpacing: "1px", color: C.muted, fontFamily: "'DM Mono', monospace" }}>
+            Threshold
+          </div>
+          <ToggleBtn label="HCM ≥15mm" on={show.hcm} onClick={() => toggle("hcm")} colorKey="hcm" lineStyle="solid" />
+        </div>
+      </div>
+
+      {/* ── Chart ── */}
+      <div style={{
+        background: C.surface, border: `1px solid ${C.border}`,
+        borderRadius: 12, padding: "20px 8px 8px 8px"
+      }}>
+        <ResponsiveContainer width="100%" height={520}>
+          <ComposedChart margin={{ top: 10, right: 40, bottom: 40, left: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#21262d" />
+            <XAxis
+              dataKey="bsa" type="number" domain={[0, 2.8]}
+              tickCount={8} tickFormatter={v => v.toFixed(1)}
+              label={{ value: "Body Surface Area (m²)", position: "insideBottom", offset: -15,
+                       style: { fontSize: 12, fill: C.muted } }}
+              stroke={C.border} tick={{ fill: C.muted, fontSize: 11, fontFamily: "'DM Mono', monospace" }}
+            />
+            <YAxis
+              dataKey="ivs" type="number" domain={[0, 22]}
+              label={{ value: "IVS Thickness (mm)", angle: -90, position: "insideLeft", offset: 10,
+                       style: { fontSize: 12, fill: C.muted } }}
+              stroke={C.border} tick={{ fill: C.muted, fontSize: 11, fontFamily: "'DM Mono', monospace" }}
+            />
+            <Tooltip content={<CustomTooltip />} />
+
+            {/* HCM threshold */}
+            {show.hcm && (
+              <ReferenceLine y={15} stroke={C.hcm} strokeDasharray="6 3" strokeWidth={1.5}
+                label={{ value: "HCM ≥15mm", position: "right",
+                         style: { fill: C.hcm, fontSize: 11, fontFamily: "'DM Mono', monospace" } }} />
+            )}
+
+            {/* PHN Male scatter */}
+            {show.male && (
+              <Scatter name="PHN Male" data={males} dataKey="ivs" xAxisId={0}
+                fill={`${C.male}55`} r={2.5} isAnimationActive={false} />
+            )}
+
+            {/* PHN Female scatter */}
+            {show.female && (
+              <Scatter name="PHN Female" data={females} dataKey="ivs" xAxisId={0}
+                fill={`${C.female}55`} r={2.5} isAnimationActive={false} />
+            )}
+
+            {/* MESA Male ULN */}
+            {show.mesaMale && (
+              <Line data={MESA_MALE_LINE} dataKey="ivs" name="MESA ♂ ULN"
+                stroke={C.mesa} strokeWidth={2} strokeDasharray="8 4"
+                dot={false} isAnimationActive={false} />
+            )}
+
+            {/* MESA Female ULN */}
+            {show.mesaFemale && (
+              <Line data={MESA_FEMALE_LINE} dataKey="ivs" name="MESA ♀ ULN"
+                stroke={C.mesa} strokeWidth={2} strokeDasharray="4 4"
+                dot={false} isAnimationActive={false} />
+            )}
+
+            {/* Shiwani Male ULN */}
+            {show.shiwaniUln && (
+              <Line data={SHIWANI} dataKey="mUln" name="Shiwani ♂ ULN"
+                stroke={C.shiwani} strokeWidth={2.5}
+                dot={false} isAnimationActive={false} />
+            )}
+
+            {/* Shiwani Female ULN */}
+            {show.shiwaniUln && (
+              <Line data={SHIWANI} dataKey="fUln" name="Shiwani ♀ ULN"
+                stroke={C.shiwani} strokeWidth={2.5} strokeDasharray="5 3"
+                dot={false} isAnimationActive={false} />
+            )}
+
+            {/* Shiwani Mean lines (optional) */}
+            {show.shiwaniMean && (
+              <Line data={SHIWANI} dataKey="mMean" name="Shiwani ♂ Mean"
+                stroke={C.shiwani} strokeWidth={1.5} strokeDasharray="10 4" strokeOpacity={0.7}
+                dot={false} isAnimationActive={false} />
+            )}
+            {show.shiwaniMean && (
+              <Line data={SHIWANI} dataKey="fMean" name="Shiwani ♀ Mean"
+                stroke={C.shiwani} strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.7}
+                dot={false} isAnimationActive={false} />
+            )}
+
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* ── Callout cards ── */}
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
+        gap: 10, marginTop: 14
+      }}>
+        {[
+          {
+            label: "The MESA Paradox",
+            color: C.mesa,
+            value: "♀ ULN > ♂",
+            sub: "Female ratiometric threshold sits above male — despite larger hearts being biologically male-predominant"
+          },
+          {
+            label: "Shiwani Correction",
+            color: C.shiwani,
+            value: "♂ ULN > ♀",
+            sub: "GAMM multivariable model correctly places male threshold above female across the full BSA range"
+          },
+          {
+            label: "The Gap at avg ♂ BSA 1.94",
+            color: C.hcm,
+            value: "16.1 vs 14.1 mm",
+            sub: "MESA ratiometric ULN exceeds Shiwani GAMM by ~2mm at average male body size — clinically meaningful"
+          }
+        ].map(({ label, color, value, sub }) => (
+          <div key={label} style={{
+            background: C.surface, border: `1px solid ${C.border}`,
+            borderRadius: 10, padding: "14px 16px"
+          }}>
+            <div style={{ fontSize: 9.5, fontWeight: 600, textTransform: "uppercase",
+              letterSpacing: "0.8px", color: C.muted,
+              fontFamily: "'DM Mono', monospace", marginBottom: 6 }}>
+              {label}
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 600, color,
+              fontFamily: "'DM Mono', monospace", letterSpacing: "-0.3px" }}>
+              {value}
+            </div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 4, lineHeight: 1.55 }}>
+              {sub}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Methodology card ── */}
+      <div style={{
+        marginTop: 10,
+        background: C.surface, border: `1px solid ${C.border}`,
+        borderRadius: 10, padding: "14px 16px",
+        display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16
+      }}>
+        <div style={{ fontSize: 9.5, fontWeight: 600, textTransform: "uppercase",
+          letterSpacing: "0.8px", color: C.muted, fontFamily: "'DM Mono', monospace",
+          marginBottom: 6, gridColumn: "1 / -1" }}>
+          ⚠ Methodological Note — Scatter vs Reference Lines
+        </div>
+        {[
+          {
+            icon: "👶",
+            label: "Age",
+            text: "PHN scatter is pediatric (≤18y). Shiwani reference is age 55 adults. Younger hearts are thinner — scatter sitting below the green lines is expected."
+          },
+          {
+            icon: "🔬",
+            label: "Modality",
+            text: "PHN data is echocardiography. Shiwani used CMR, which consistently measures thicker walls due to better tissue resolution and no dropout."
+          },
+          {
+            icon: "📐",
+            label: "Measurement",
+            text: "PHN measures IVS at a fixed parasternal long-axis location. Shiwani's 'maximal wall thickness' scans the entire LV — always ≥ IVS by definition."
+          }
+        ].map(({ icon, label, text }) => (
+          <div key={label}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 4 }}>
+              {icon} {label}
+            </div>
+            <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>
+              {text}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Footer ── */}
+      <div style={{
+        marginTop: 20, fontSize: 11, color: C.muted,
+        fontFamily: "'DM Mono', monospace", lineHeight: 1.8,
+        borderTop: `1px solid ${C.border}`, paddingTop: 16
+      }}>
+        <strong style={{ color: "#484f58" }}>Data:</strong> Synthetic scatter — real PHN BSA values,
+        IVS sampled via Lauzon-Schnittka Z-score formula (α=0.40, mean=5.8mm, SD=0.9mm) ·
+        <strong style={{ color: "#484f58" }}> MESA:</strong> Strom et al. IVS/BSA mean+2SD ·
+        <strong style={{ color: "#484f58" }}> Shiwani:</strong> GAMM 95% PI, CMR n=5,067, age=55, BMI=24 ·
+        <strong style={{ color: "#484f58" }}> HCM:</strong> ASE/ESC threshold ≥15mm
+      </div>
+    </div>
+  );
+}
+
+// ── Bootstrap ────────────────────────────────────────────────────────────────
+fetch("phn_ivs_data.json")
+  .then(r => r.json())
+  .then(data => {
+    ReactDOM.render(<App data={data} />, document.getElementById("root"));
+  })
+  .catch(() => {
+    document.getElementById("root").innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;height:60vh;
+        font-family:'DM Mono',monospace;color:#ff7b72;font-size:13px;
+        flex-direction:column;gap:12px;">
+        <div>⚠ Could not load phn_ivs_data.json</div>
+        <div style="color:#7d8590;font-size:11px;">
+          Make sure phn_ivs_data.json is in the same folder as index.html.
+        </div>
+      </div>`;
+  });
+</script>
 </body>
 </html>
