@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IVS Scaling — PHN Data vs Reference Standards</title>
+  <title>IVS Scaling — Real Data vs Reference Standards</title>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -260,13 +260,13 @@ function App({ data }) {
           Indexing for the Precision Medicine Era
         </div>
         <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.4px", lineHeight: 1.3 }}>
-          IVS Thickness — PHN Synthetic Data vs Reference Standards
+          IVS Thickness — Data vs Adult Reference Standards
         </h1>
         <p style={{
           fontSize: 12, color: C.muted, marginTop: 6,
           fontFamily: "'DM Mono', monospace", lineHeight: 1.7
         }}>
-          N={meta.n_male + meta.n_female} synthetic subjects (♂ {meta.n_male} · ♀ {meta.n_female}) ·
+          N={meta.n_male + meta.n_female} subjects (♂ {meta.n_male} · ♀ {meta.n_female}) ·
           real PHN BSA values · IVS sampled via Z ~ N(0,1) · α=0.40 · mean=5.8mm · SD=0.9mm
         </p>
       </div>
@@ -353,7 +353,7 @@ function App({ data }) {
             {/* HCM threshold */}
             {show.hcm && (
               <ReferenceLine y={15} stroke={C.hcm} strokeDasharray="6 3" strokeWidth={1.5}
-                label={{ value: "HCM ≥15mm", position: "insideTopRight",
+                label={{ value: "HCM ≥15mm", position: "insideTopLeft",
                          style: { fill: C.hcm, fontSize: 11, fontFamily: "'DM Mono', monospace" } }} />
             )}
 
@@ -435,13 +435,13 @@ function App({ data }) {
             label: "The MESA Paradox",
             color: C.mesa,
             value: "♀ ULN > ♂",
-            sub: "Female ratiometric threshold sits above male — despite larger hearts being biologically male-predominant"
+            sub: "Ratiometric index places female threshold above male — counterintuitive and clinically problematic"
           },
           {
             label: "Shiwani Correction",
             color: C.shiwani,
             value: "♂ ULN > ♀",
-            sub: "GAMM multivariable model correctly places male threshold above female across the full BSA range"
+            sub: "GAMM multivariable model places male threshold above female across the full BSA range"
           },
           {
             label: "The Gap at avg ♂ BSA 1.94",
@@ -486,17 +486,17 @@ function App({ data }) {
           {
             icon: "👶",
             label: "Age",
-            text: "PHN scatter is pediatric (≤18y). Shiwani reference is age 55 adults. Younger hearts are thinner — scatter sitting below the green lines is expected."
+            text: "PHN scatter is pediatric (≤18y). Shiwani reference is age 55 adults. Younger hearts may be thinner — scatter sitting below the green lines is expected."
           },
           {
             icon: "🔬",
             label: "Modality",
-            text: "PHN data is echocardiography. Shiwani used CMR, which consistently measures thicker walls due to better tissue resolution and no dropout."
+            text: "PHN data is echocardiography. Shiwani used CMR, which may have better tissue resolution and no dropout."
           },
           {
             icon: "📐",
             label: "Measurement",
-            text: "PHN measures IVS at a fixed parasternal long-axis location. Shiwani's 'maximal wall thickness' scans the entire LV — always ≥ IVS by definition."
+            text: "PHN measures IVS at a fixed parasternal long-axis location. Shiwani's 'maximal wall thickness' scans the entire LV — not always the IVS."
           }
         ].map(({ icon, label, text }) => (
           <div key={label}>
