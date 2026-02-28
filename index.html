@@ -70,7 +70,7 @@
 const { useState, useEffect, useMemo, useCallback } = React;
 const Recharts = window.Recharts;
 const {
-  ScatterChart, Scatter, LineChart, Line,
+  ScatterChart, LineChart, Line,
   ComposedChart, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ReferenceLine, ResponsiveContainer
 } = Recharts;
@@ -88,8 +88,12 @@ const C = {
   text:    "#e6edf3",
 };
 
-// ── Shiwani GAMM reference data (age=55, BMI=24) ────────────────────────────
-const SHIWANI = [
+// ── Shared BSA grid + all reference lines merged into one dataset ────────────
+// Single array means tooltip cursor always finds a point in every active series.
+// Shiwani is only defined for BSA ≥ 1.07; values outside that range are null.
+
+// Shiwani lookup table (interpolate between known points)
+const SHIWANI_RAW = [
   { bsa:1.07, mUln:11.9, fUln:10.5, mMean:9.0,  fMean:7.7  },
   { bsa:1.14, mUln:11.9, fUln:10.5, mMean:9.0,  fMean:7.7  },
   { bsa:1.21, mUln:11.9, fUln:10.5, mMean:9.0,  fMean:7.7  },
@@ -114,17 +118,33 @@ const SHIWANI = [
   { bsa:2.66, mUln:16.0, fUln:14.7, mMean:13.1, fMean:11.8 },
 ];
 
-// ── MESA ratiometric reference lines ─────────────────────────────────────────
-// Strom IVS/BSA: Male mean+2SD = 8.3 mm/m², Female = 8.6 mm/m²
-// (Female > Male — the contradiction!)
-function mesaLine(coeff, nPoints = 60) {
-  return Array.from({ length: nPoints }, (_, i) => {
-    const bsa = 0.3 + (i / (nPoints - 1)) * 2.4;
-    return { bsa: +bsa.toFixed(3), ivs: +(coeff * bsa).toFixed(2) };
-  });
+function shiwaniInterp(bsa) {
+  if (bsa < 1.07) return { mUln: null, fUln: null, mMean: null, fMean: null };
+  const last = SHIWANI_RAW[SHIWANI_RAW.length - 1];
+  if (bsa >= last.bsa) return { mUln: last.mUln, fUln: last.fUln, mMean: last.mMean, fMean: last.fMean };
+  const hi = SHIWANI_RAW.find(r => r.bsa >= bsa);
+  const lo = SHIWANI_RAW.slice().reverse().find(r => r.bsa <= bsa);
+  if (!lo || lo.bsa === hi.bsa) return hi;
+  const t = (bsa - lo.bsa) / (hi.bsa - lo.bsa);
+  return {
+    mUln:  +(lo.mUln  + t * (hi.mUln  - lo.mUln )).toFixed(2),
+    fUln:  +(lo.fUln  + t * (hi.fUln  - lo.fUln )).toFixed(2),
+    mMean: +(lo.mMean + t * (hi.mMean - lo.mMean)).toFixed(2),
+    fMean: +(lo.fMean + t * (hi.fMean - lo.fMean)).toFixed(2),
+  };
 }
-const MESA_MALE_LINE   = mesaLine(8.3);
-const MESA_FEMALE_LINE = mesaLine(8.6);
+
+// Build unified grid: 80 points, BSA 0.10 → 2.80
+const REF_DATA = Array.from({ length: 80 }, (_, i) => {
+  const bsa = +(0.10 + (i / 79) * 2.70).toFixed(3);
+  const s = shiwaniInterp(bsa);
+  return {
+    bsa,
+    mesaMale:   +(8.3 * bsa).toFixed(2),
+    mesaFemale: +(8.6 * bsa).toFixed(2),
+    ...s,
+  };
+});
 
 // ── Toggle button component ───────────────────────────────────────────────────
 function ToggleBtn({ label, on, onClick, colorKey, lineStyle = "dot" }) {
@@ -172,8 +192,13 @@ function ToggleBtn({ label, on, onClick, colorKey, lineStyle = "dot" }) {
 }
 
 // ── Custom tooltip ────────────────────────────────────────────────────────────
+// Only show reference line values — PHN scatter points excluded
+const PHN_NAMES = new Set(["PHN Male", "PHN Female"]);
+
 function CustomTooltip({ active, payload }) {
   if (!active || !payload || payload.length === 0) return null;
+  const refLines = payload.filter(p => !PHN_NAMES.has(p.name));
+  if (refLines.length === 0) return null;
   return (
     <div style={{
       background: C.surface, border: `1px solid ${C.border}`,
@@ -181,10 +206,9 @@ function CustomTooltip({ active, payload }) {
       fontFamily: "'DM Mono', monospace", fontSize: 12,
       boxShadow: "0 4px 16px rgba(0,0,0,0.4)"
     }}>
-      {payload.map((p, i) => (
+      {refLines.map((p, i) => (
         <div key={i} style={{ color: p.color || p.stroke || C.text, padding: "1px 0" }}>
-          {p.name}: <strong>{typeof p.value === "number" ? p.value.toFixed(2) : p.value}</strong>
-          {p.name && p.name.includes("BSA") ? " m²" : " mm"}
+          {p.name}: <strong>{typeof p.value === "number" ? p.value.toFixed(1) : p.value}</strong> mm
         </div>
       ))}
     </div>
@@ -194,29 +218,33 @@ function CustomTooltip({ active, payload }) {
 // ── Main App ─────────────────────────────────────────────────────────────────
 function App({ data }) {
   const [show, setShow] = useState({
-    male:         true,
-    female:       true,
-    mesaMale:     true,
-    mesaFemale:   true,
-    shiwaniUln:   true,
-    shiwaniMean:  false,
-    hcm:          true,
+    male:              true,
+    female:            true,
+    mesaMale:          true,
+    mesaFemale:        true,
+    shiwaniMaleUln:    true,
+    shiwaniFemaleUln:  true,
+    shiwaniMean:       false,
+    hcm:               true,
   });
 
   const toggle = key => setShow(s => ({ ...s, [key]: !s[key] }));
 
-  // Downsample scatter for performance (max 800 per sex)
-  const males = useMemo(() => {
-    if (data.males.length <= 800) return data.males;
-    const step = Math.ceil(data.males.length / 800);
-    return data.males.filter((_, i) => i % step === 0);
-  }, [data.males]);
+  // BSA-weighted downsample: keep all points above BSA threshold,
+  // thin the dense low-BSA cluster where visual saturation adds nothing.
+  // Target ~1500 per sex total.
+  function bsaWeightedSample(pts, target = 1500, fullAbove = 1.2) {
+    if (pts.length <= target) return pts;
+    const high = pts.filter(p => p.bsa >= fullAbove);
+    const low  = pts.filter(p => p.bsa <  fullAbove);
+    const lowTarget = Math.max(target - high.length, 0);
+    const step = Math.ceil(low.length / lowTarget);
+    const sampledLow = low.filter((_, i) => i % step === 0);
+    return [...sampledLow, ...high];
+  }
 
-  const females = useMemo(() => {
-    if (data.females.length <= 800) return data.females;
-    const step = Math.ceil(data.females.length / 800);
-    return data.females.filter((_, i) => i % step === 0);
-  }, [data.females]);
+  const males   = useMemo(() => bsaWeightedSample(data.males),   [data.males]);
+  const females = useMemo(() => bsaWeightedSample(data.females), [data.females]);
 
   const meta = data.meta || {};
 
@@ -239,7 +267,7 @@ function App({ data }) {
           fontFamily: "'DM Mono', monospace", lineHeight: 1.7
         }}>
           N={meta.n_male + meta.n_female} synthetic subjects (♂ {meta.n_male} · ♀ {meta.n_female}) ·
-          real PHN BSA values · IVS sampled via Z ~ N(0,1) · α={meta.alpha} · {meta.source}
+          real PHN BSA values · IVS sampled via Z ~ N(0,1) · α=0.40 · mean=5.8mm · SD=0.9mm
         </p>
       </div>
 
@@ -268,7 +296,7 @@ function App({ data }) {
             MESA Ratiometric ULN
           </div>
           <div style={{ display: "flex", gap: 6 }}>
-            <ToggleBtn label="♂ ULN (8.3×BSA)" on={show.mesaMale}   onClick={() => toggle("mesaMale")}   colorKey="mesa" lineStyle="dashed" />
+            <ToggleBtn label="♂ ULN (8.3×BSA)" on={show.mesaMale}   onClick={() => toggle("mesaMale")}   colorKey="mesa" lineStyle="solid" />
             <ToggleBtn label="♀ ULN (8.6×BSA)" on={show.mesaFemale} onClick={() => toggle("mesaFemale")} colorKey="mesa" lineStyle="dashed" />
           </div>
         </div>
@@ -280,8 +308,8 @@ function App({ data }) {
             Shiwani GAMM · age 55 · BMI 24
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <ToggleBtn label="♂ ULN" on={show.shiwaniUln}  onClick={() => toggle("shiwaniUln")}  colorKey="shiwani" lineStyle="solid" />
-            <ToggleBtn label="♀ ULN" on={show.shiwaniUln}  onClick={() => toggle("shiwaniUln")}  colorKey="shiwani" lineStyle="solid" />
+            <ToggleBtn label="♂ ULN" on={show.shiwaniMaleUln}   onClick={() => toggle("shiwaniMaleUln")}   colorKey="shiwani" lineStyle="solid" />
+            <ToggleBtn label="♀ ULN" on={show.shiwaniFemaleUln} onClick={() => toggle("shiwaniFemaleUln")} colorKey="shiwani" lineStyle="dashed" />
             <ToggleBtn label="± Mean lines" on={show.shiwaniMean} onClick={() => toggle("shiwaniMean")} colorKey="shiwani" lineStyle="dashed" />
           </div>
         </div>
@@ -302,7 +330,10 @@ function App({ data }) {
         borderRadius: 12, padding: "20px 8px 8px 8px"
       }}>
         <ResponsiveContainer width="100%" height={520}>
-          <ComposedChart margin={{ top: 10, right: 40, bottom: 40, left: 20 }}>
+          <ComposedChart
+            margin={{ top: 10, right: 40, bottom: 40, left: 20 }}
+            data={[]}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#21262d" />
             <XAxis
               dataKey="bsa" type="number" domain={[0, 2.8]}
@@ -312,7 +343,7 @@ function App({ data }) {
               stroke={C.border} tick={{ fill: C.muted, fontSize: 11, fontFamily: "'DM Mono', monospace" }}
             />
             <YAxis
-              dataKey="ivs" type="number" domain={[0, 22]}
+              type="number" domain={[0, 22]}
               label={{ value: "IVS Thickness (mm)", angle: -90, position: "insideLeft", offset: 10,
                        style: { fontSize: 12, fill: C.muted } }}
               stroke={C.border} tick={{ fill: C.muted, fontSize: 11, fontFamily: "'DM Mono', monospace" }}
@@ -322,60 +353,72 @@ function App({ data }) {
             {/* HCM threshold */}
             {show.hcm && (
               <ReferenceLine y={15} stroke={C.hcm} strokeDasharray="6 3" strokeWidth={1.5}
-                label={{ value: "HCM ≥15mm", position: "right",
+                label={{ value: "HCM ≥15mm", position: "insideTopRight",
                          style: { fill: C.hcm, fontSize: 11, fontFamily: "'DM Mono', monospace" } }} />
             )}
 
-            {/* PHN Male scatter */}
+            {/* PHN Male — rendered as dots via Line with no stroke */}
             {show.male && (
-              <Scatter name="PHN Male" data={males} dataKey="ivs" xAxisId={0}
-                fill={`${C.male}55`} r={2.5} isAnimationActive={false} />
+              <Line
+                data={males} dataKey="ivs" name="PHN Male"
+                stroke="none" strokeWidth={0}
+                dot={{ r: 3, fill: `${C.male}88`, strokeWidth: 0 }}
+                activeDot={{ r: 4, fill: C.male, strokeWidth: 0 }}
+                isAnimationActive={false}
+                legendType="circle"
+              />
             )}
 
-            {/* PHN Female scatter */}
+            {/* PHN Female — rendered as dots via Line with no stroke */}
             {show.female && (
-              <Scatter name="PHN Female" data={females} dataKey="ivs" xAxisId={0}
-                fill={`${C.female}55`} r={2.5} isAnimationActive={false} />
+              <Line
+                data={females} dataKey="ivs" name="PHN Female"
+                stroke="none" strokeWidth={0}
+                dot={{ r: 3, fill: `${C.female}88`, strokeWidth: 0 }}
+                activeDot={{ r: 4, fill: C.female, strokeWidth: 0 }}
+                isAnimationActive={false}
+                legendType="circle"
+              />
             )}
 
-            {/* MESA Male ULN */}
+            {/* MESA Male ULN — solid */}
             {show.mesaMale && (
-              <Line data={MESA_MALE_LINE} dataKey="ivs" name="MESA ♂ ULN"
-                stroke={C.mesa} strokeWidth={2} strokeDasharray="8 4"
-                dot={false} isAnimationActive={false} />
+              <Line data={REF_DATA} dataKey="mesaMale" name="MESA ♂ ULN"
+                stroke={C.mesa} strokeWidth={2}
+                dot={false} activeDot={{ r: 0, strokeWidth: 0 }} isAnimationActive={false} />
             )}
 
-            {/* MESA Female ULN */}
+            {/* MESA Female ULN — dashed */}
             {show.mesaFemale && (
-              <Line data={MESA_FEMALE_LINE} dataKey="ivs" name="MESA ♀ ULN"
-                stroke={C.mesa} strokeWidth={2} strokeDasharray="4 4"
-                dot={false} isAnimationActive={false} />
+              <Line data={REF_DATA} dataKey="mesaFemale" name="MESA ♀ ULN"
+                stroke={C.mesa} strokeWidth={2} strokeDasharray="6 4"
+                dot={false} activeDot={{ r: 0, strokeWidth: 0 }} isAnimationActive={false} />
             )}
 
-            {/* Shiwani Male ULN */}
-            {show.shiwaniUln && (
-              <Line data={SHIWANI} dataKey="mUln" name="Shiwani ♂ ULN"
-                stroke={C.shiwani} strokeWidth={2.5}
-                dot={false} isAnimationActive={false} />
+            {/* Shiwani Male ULN — solid */}
+            {show.shiwaniMaleUln && (
+              <Line data={REF_DATA} dataKey="mUln" name="Shiwani ♂ ULN"
+                stroke={C.shiwani} strokeWidth={2.5} connectNulls={false}
+                dot={false} activeDot={{ r: 0, strokeWidth: 0 }} isAnimationActive={false} />
             )}
 
-            {/* Shiwani Female ULN */}
-            {show.shiwaniUln && (
-              <Line data={SHIWANI} dataKey="fUln" name="Shiwani ♀ ULN"
-                stroke={C.shiwani} strokeWidth={2.5} strokeDasharray="5 3"
-                dot={false} isAnimationActive={false} />
+            {/* Shiwani Female ULN — dashed */}
+            {show.shiwaniFemaleUln && (
+              <Line data={REF_DATA} dataKey="fUln" name="Shiwani ♀ ULN"
+                stroke={C.shiwani} strokeWidth={2.5} strokeDasharray="6 4" connectNulls={false}
+                dot={false} activeDot={{ r: 0, strokeWidth: 0 }} isAnimationActive={false} />
             )}
 
-            {/* Shiwani Mean lines (optional) */}
+            {/* Shiwani Mean lines */}
             {show.shiwaniMean && (
-              <Line data={SHIWANI} dataKey="mMean" name="Shiwani ♂ Mean"
-                stroke={C.shiwani} strokeWidth={1.5} strokeDasharray="10 4" strokeOpacity={0.7}
-                dot={false} isAnimationActive={false} />
+              <Line data={REF_DATA} dataKey="mMean" name="Shiwani ♂ Mean"
+                stroke={C.shiwani} strokeWidth={1.5} strokeOpacity={0.55} connectNulls={false}
+                dot={false} activeDot={{ r: 0, strokeWidth: 0 }} isAnimationActive={false} />
             )}
             {show.shiwaniMean && (
-              <Line data={SHIWANI} dataKey="fMean" name="Shiwani ♀ Mean"
-                stroke={C.shiwani} strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.7}
-                dot={false} isAnimationActive={false} />
+              <Line data={REF_DATA} dataKey="fMean" name="Shiwani ♀ Mean"
+                stroke={C.shiwani} strokeWidth={1.5} strokeDasharray="6 4" strokeOpacity={0.55} connectNulls={false}
+                dot={false} activeDot={{ r: 0, strokeWidth: 0 }} isAnimationActive={false} />
             )}
 
           </ComposedChart>
@@ -467,17 +510,87 @@ function App({ data }) {
         ))}
       </div>
 
+      {/* ── Sources ── */}
+      <div style={{
+        marginTop: 10,
+        background: C.surface, border: `1px solid ${C.border}`,
+        borderRadius: 10, padding: "14px 16px",
+      }}>
+        <div style={{ fontSize: 9.5, fontWeight: 600, textTransform: "uppercase",
+          letterSpacing: "0.8px", color: C.muted, fontFamily: "'DM Mono', monospace",
+          marginBottom: 10 }}>
+          Sources
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "6px 24px" }}>
+          {[
+            {
+              tag: "MESA",
+              color: C.mesa,
+              text: "Strom et al. Reference Values for Indexed Echocardiographic Chamber Sizes in Older Adults. J Am Heart Assoc. 2024;13:e034029.",
+              href: "https://www.ahajournals.org/doi/10.1161/JAHA.123.034029"
+            },
+            {
+              tag: "PHN",
+              color: C.male,
+              text: "Lopez et al., Relationship of Echocardiographic Z Scores Adjusted for Body Surface Area to Age, Sex, Race, and Ethnicity. Circ Cardiovasc Imaging. 2017.",
+              href: "https://www.ahajournals.org/doi/10.1161/CIRCIMAGING.117.006979"
+            },
+            {
+              tag: "Shiwani",
+              color: C.shiwani,
+              text: "Shiwani et al. Demographic-Based Personalized Left Ventricular Hypertrophy Thresholds. J Am Coll Cardiol. 2025;85(7):685–695.",
+              href: "https://www.jacc.org/doi/10.1016/j.jacc.2024.10.082"
+            },
+            {
+              tag: "Calculator",
+              color: C.shiwani,
+              text: "Shiwani et al. online HCM/LVH threshold calculator. Shiwani values sampled at 5cm height increments (BMI=24, age=55) via this tool.",
+              href: "https://hcmcalculator.com/"
+            },
+          ].map(({ tag, color, text, href }) => (
+            <div key={tag} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <span style={{
+                fontSize: 9, fontWeight: 700, fontFamily: "'DM Mono', monospace",
+                color, background: `${color}22`, border: `1px solid ${color}55`,
+                borderRadius: 4, padding: "1px 6px", whiteSpace: "nowrap", marginTop: 1
+              }}>
+                {tag}
+              </span>
+              <span style={{ fontSize: 11, color: C.muted, lineHeight: 1.6 }}>
+                {text}{" "}
+                <a href={href} target="_blank" rel="noopener noreferrer"
+                  style={{ color: C.muted, textDecoration: "underline", textDecorationColor: "#484f58" }}>
+                  ↗ link
+                </a>
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* ── Footer ── */}
       <div style={{
-        marginTop: 20, fontSize: 11, color: C.muted,
-        fontFamily: "'DM Mono', monospace", lineHeight: 1.8,
-        borderTop: `1px solid ${C.border}`, paddingTop: 16
+        marginTop: 20, paddingTop: 16,
+        borderTop: `1px solid ${C.border}`,
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        flexWrap: "wrap", gap: 8
       }}>
-        <strong style={{ color: "#484f58" }}>Data:</strong> Synthetic scatter — real PHN BSA values,
-        IVS sampled via Lauzon-Schnittka Z-score formula (α=0.40, mean=5.8mm, SD=0.9mm) ·
-        <strong style={{ color: "#484f58" }}> MESA:</strong> Strom et al. IVS/BSA mean+2SD ·
-        <strong style={{ color: "#484f58" }}> Shiwani:</strong> GAMM 95% PI, CMR n=5,067, age=55, BMI=24 ·
-        <strong style={{ color: "#484f58" }}> HCM:</strong> ASE/ESC threshold ≥15mm
+        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: C.muted, lineHeight: 1.8 }}>
+          <span style={{ color: C.text, fontWeight: 500 }}>Dan Dyar</span>
+          <span style={{ color: "#484f58" }}> · MA, ACS, RDCS, FASE · 2026</span>
+        </div>
+        <a href="https://www.linkedin.com/in/dan-dyar-ma-acs-rdcs-ae-pe-fe-fase/"
+          target="_blank" rel="noopener noreferrer"
+          style={{
+            fontFamily: "'DM Mono', monospace", fontSize: 11,
+            color: C.muted, textDecoration: "none",
+            display: "flex", alignItems: "center", gap: 5,
+          }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill={C.muted}>
+            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+          </svg>
+          LinkedIn
+        </a>
       </div>
     </div>
   );
